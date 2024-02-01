@@ -58,6 +58,12 @@ class GLTF {
     function new() {}
 
     public static function parseAndLoadGLB(data: Bytes): GLTF {
+        var chunks = getGLBChunks(data);
+        var raw: TGLTF = parse(chunks.json);
+        return load(raw, [chunks.binary]);
+    }
+
+    public static function getGLBChunks(data: Bytes): { json:String, binary:Bytes } {
         if(data.sub(0, 4).compare(Bytes.ofString('glTF')) != 0) {
             throw 'invalid magic: ${data.sub(0, 4).toHex()}';
         }
@@ -75,8 +81,6 @@ class GLTF {
         }
 
         var jsonChunk: String = data.sub(20, jsonChunkLength).toString();
-        var raw: TGLTF = parse(jsonChunk);
-
         var binaryChunkLength: Int = data.sub(20 + jsonChunkLength, 4).getInt32(0);
         if(binaryChunkLength < 1) {
             throw 'invalid binary chunk length: ${binaryChunkLength}';
@@ -85,7 +89,7 @@ class GLTF {
             throw 'invalid binary chunk type: ${data.sub(24 + jsonChunkLength, 4).toHex()}';
         }
 
-        return load(raw, [data.sub(28 + jsonChunkLength, binaryChunkLength)]);
+        return {json: jsonChunk, binary: data.sub(28 + jsonChunkLength, binaryChunkLength)};
     }
 
     public inline static function parseAndLoad(src:String, buffers:Array<Bytes>):GLTF {
@@ -221,23 +225,44 @@ class GLTF {
             if(node.matrix != null) {
                 var a:Array<Float> = node.matrix;
 
-                node.translation = new Array<Float>();
-                node.translation.push(a[12]);
-                node.translation.push(a[13]);
-                node.translation.push(a[14]);
+                node.translation = [a[12], a[13], a[14]];
 
                 var sx:Float = Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2] + a[3]*a[3]);
                 var sy:Float = Math.sqrt(a[4]*a[4] + a[5]*a[5] + a[6]*a[6] + a[7]*a[7]);
                 var sz:Float = Math.sqrt(a[8]*a[8] + a[9]*a[9] + a[10]*a[10] + a[11]*a[11]);
-                node.scale = new Array<Float>();
-                node.scale.push(sx); node.scale.push(sy); node.scale.push(sz);
+                node.scale = [sx, sy, sz];
 
-                var m00 = a[0] / sx; var m11 = a[5] / sy; var m22 = a[10] / sz;
-                node.rotation = new Array<Float>();
-                node.rotation.push(Math.sqrt(Math.max(0.0, 1.0 + m00 - m11 - m22)) / 2.0);
-                node.rotation.push(Math.sqrt(Math.max(0.0, 1.0 - m00 + m11 - m22)) / 2.0);
-                node.rotation.push(Math.sqrt(Math.max(0.0, 1.0 - m00 - m11 + m22)) / 2.0);
-                node.rotation.push(Math.sqrt(Math.max(0.0, 1.0 + m00 + m11 + m22)) / 2.0);
+                var m00:Float = a[0] / sx; var m01:Float = a[4] / sy; var m02:Float = a[8] / sz;
+                var m10:Float = a[1] / sx; var m11:Float = a[5] / sy; var m12:Float = a[9] / sz;
+                var m20:Float = a[2] / sx; var m21:Float = a[6] / sy; var m22:Float = a[10] / sz;
+                var tr:Float = m00 + m11 + m22;
+                var qx:Float, qy:Float, qz:Float, qw:Float;
+                if (tr > 0) {
+                    var S = Math.sqrt(tr+1.0) * 2; // S=4*qw
+                    qw = 0.25 * S;
+                    qx = (m21 - m12) / S;
+                    qy = (m02 - m20) / S;
+                    qz = (m10 - m01) / S;
+                } else if (m00 > m11 && m00 > m22) {
+                    var S = Math.sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
+                    qw = (m21 - m12) / S;
+                    qx = 0.25 * S;
+                    qy = (m01 + m10) / S;
+                    qz = (m02 + m20) / S;
+                } else if (m11 > m22) {
+                    var S = Math.sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
+                    qw = (m02 - m20) / S;
+                    qx = (m01 + m10) / S;
+                    qy = 0.25 * S;
+                    qz = (m12 + m21) / S;
+                } else {
+                    var S = Math.sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
+                    qw = (m10 - m01) / S;
+                    qx = (m02 + m20) / S;
+                    qy = (m12 + m21) / S;
+                    qz = 0.25 * S;
+                }
+                node.rotation = [qx, qy, qz, qw];
             }
             // if the matrix needs filling in..
             else if(node.matrix == null && (node.rotation != null || node.scale != null || node.translation != null)) {
@@ -261,17 +286,17 @@ class GLTF {
 
                 node.matrix = [
                     (1 - (yy + zz)) * node.scale[0],
-                    (xy + wz) * node.scale[0],
-                    (xz - wy) * node.scale[0],
+                    (xy - wz) * node.scale[0],
+                    (wy + xz) * node.scale[0],
                     0,
 
-                    (xy - wz) * node.scale[1],
+                    (xy + wz) * node.scale[1],
                     (1 - (xx + zz)) * node.scale[1],
-                    (yz + wx) * node.scale[1],
+                    (yz - wx) * node.scale[1],
                     0,
 
-                    (xz + wy) * node.scale[2],
-                    (yz - wx) * node.scale[2],
+                    (xz - wy) * node.scale[2],
+                    (yz + wx) * node.scale[2],
                     (1 - (xx + yy)) * node.scale[2],
                     0,
 
