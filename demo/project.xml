@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<project>
+	<set name="app_name" value="Test" />
+	<set name="app_ver" value="1.0.0" />
+	<set name="app_ww" value="1920"/>
+	<set name="app_hh" value="1080"/>
+	<set name="app_bgcol" value="0x000000"/>
+	<set name="app_platform" value="unknown" />
+	<section if="windows">
+		<set name="app_platform" value="win" />
+		<echo value="- Compilation mode: win" />
+	</section>
+	<section if="mac">
+		<set name="app_platform" value="mac" />
+		<echo value="- Compilation mode: mac" />
+	</section>
+
+	<language name="en-US" />
+
+	<meta title="${app_name}" package="com.wplabs.gltf.anim.test" version="0.1" company="GameRotor" />
+
+	<app main="Boot" file="Boot" path="bin" />
+	<window width="1920" height="1080" orientation="landscape" background="0x000000" />
+	<window depth-buffer="true" stencil-buffer="true" fps="60" hardware="true" vsync="true" />
+	<window resizable="true"/>
+	
+	<haxedef name="haxeJSON"/>
+	<haxelib name="starling" />
+	<haxelib name="openfl" />
+	<source path="../src" />
+
+</project>
+
