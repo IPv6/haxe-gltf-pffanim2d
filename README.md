@@ -1,4 +1,6 @@
-# haxe-gltf
-[![GitHub license](https://img.shields.io/badge/license-Apache%202-blue.svg?style=flat-square)](https://raw.githubusercontent.com/FuzzyWuzzie/haxe-gltf/master/LICENSE) [![Travis](https://img.shields.io/travis/rust-lang/rust/master.svg?style=flat-square)](https://travis-ci.org/FuzzyWuzzie/haxe-gltf.svg?branch=master)
+# Simple 2d Animation Library for Blender->gLTF->OpenFL/Starling game workflow
+- Supported: Objects (empty/quad) TRS animations
+- Not supported: bone/armature/skeletal animations, shapekeys animations
 
-A Haxe library for reading (and eventually, writing) [GLTF](https://github.com/KhronosGroup/glTF) files.
+# gLTF loading based on haxe-gltf
+haxe-gltf: A Haxe library for reading (and eventually, writing) [GLTF](https://github.com/KhronosGroup/glTF) files.

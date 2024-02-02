@@ -1,12 +1,12 @@
 {
-  "name": "gltf",
+  "name": "gltf-starling-anim2d",
   "classPath": "src",
-  "url" : "https://github.com/FuzzyWuzzie/haxe-gltf",
+  "url" : "https://github.com/IPv6/haxe-gltf-starling-anim2d",
   "license": "Apache",
   "tags": ["cross", "utility"],
-  "description": "A Haxe library for reading glTF 2.0 files",
+  "description": "A Haxe library for using glTF 2.0 with Starling",
   "version": "2.1.0",
-  "releasenote": "Added parsing .glb files, added buffer retrieval callback",
-  "contributors": ["FuzzyWuzzie"],
+  "releasenote": "",
+  "contributors": ["IPv6"],
   "dependencies": {}
 }

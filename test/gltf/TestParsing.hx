@@ -33,9 +33,9 @@ class TestParsing extends BuddySuite {
 
             it('should parse children arrays', {
                 riggedSimpleRaw.nodes[0].children.should.not.be(null);
-                riggedSimpleRaw.nodes[0].children.length.should.be(2);
-                riggedSimpleRaw.nodes[0].children[0].should.be(4);
-                riggedSimpleRaw.nodes[0].children[1].should.be(1);
+                riggedSimpleRaw.nodes[1].children.length.should.be(2);
+                riggedSimpleRaw.nodes[1].children[0].should.be(3);
+                riggedSimpleRaw.nodes[1].children[1].should.be(2);
                 riggedSimpleRaw.nodes[4].children.should.not.be(null);
                 if(riggedSimpleRaw.nodes[4].children != null) {
                     riggedSimpleRaw.nodes[4].children.length.should.be(1);
@@ -69,30 +69,24 @@ class TestParsing extends BuddySuite {
 
             it('should load the animation channels', {
                 riggedSimpleRaw.animations[0].channels.should.not.be(null);
-                riggedSimpleRaw.animations[0].channels.length.should.be(6);
+                riggedSimpleRaw.animations[0].channels.length.should.be(3);
 
                 riggedSimpleRaw.animations[0].channels[0].should.not.be(null);
                 riggedSimpleRaw.animations[0].channels[1].should.not.be(null);
                 riggedSimpleRaw.animations[0].channels[2].should.not.be(null);
-                riggedSimpleRaw.animations[0].channels[3].should.not.be(null);
-                riggedSimpleRaw.animations[0].channels[4].should.not.be(null);
-                riggedSimpleRaw.animations[0].channels[5].should.not.be(null);
 
-                riggedSimpleRaw.animations[0].channels[5].sampler.should.be(5);
-                riggedSimpleRaw.animations[0].channels[5].target.node.should.be(3);
-                riggedSimpleRaw.animations[0].channels[5].target.path.should.be(gltf.schema.TAnimationChannelTargetPath.SCALE);
+                riggedSimpleRaw.animations[0].channels[2].sampler.should.be(2);
+                riggedSimpleRaw.animations[0].channels[2].target.node.should.be(4);
+                riggedSimpleRaw.animations[0].channels[2].target.path.should.be(gltf.schema.TAnimationChannelTargetPath.SCALE);
             });
 
             it('should load the animation samplers', {
                 riggedSimpleRaw.animations[0].samplers.should.not.be(null);
-                riggedSimpleRaw.animations[0].samplers.length.should.be(6);
+                riggedSimpleRaw.animations[0].samplers.length.should.be(3);
 
                 riggedSimpleRaw.animations[0].samplers[0].should.not.be(null);
                 riggedSimpleRaw.animations[0].samplers[1].should.not.be(null);
                 riggedSimpleRaw.animations[0].samplers[2].should.not.be(null);
-                riggedSimpleRaw.animations[0].samplers[3].should.not.be(null);
-                riggedSimpleRaw.animations[0].samplers[4].should.not.be(null);
-                riggedSimpleRaw.animations[0].samplers[5].should.not.be(null);
             });
 
             it("should parse glb files");

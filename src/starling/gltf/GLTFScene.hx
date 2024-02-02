@@ -57,32 +57,40 @@ class GLTFScene {
 	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, gltf_node_generators:Map<String,Dynamic>): DisplayObjectContainer
 	{
 		gltf_load_warnings = new Array<String>();
-		function llog(message:String) {
+		function log_e(message:String) {
 			gltf_load_warnings.push(message);
 			log(message);
 		}
 		if(Utils.safeLen(gltf_resource_name) == 0 || Utils.safeLen(gltf_resources) == 0){
-			llog("error: gltf_resource_name || gltf_resources");
+			log_e("error: !gltf_resource_name || !gltf_resources");
 			return null;
 		}
 		if(Utils.safeLen(gltf_resources[gltf_resource_name]) == 0){
-			llog("error: gltf_resource_name, gltf_resource_name not found");
+			log_e("error: gltf_resources[gltf_resource_name] == null");
 			return null;
 		}
-		var json = gltf_resources[gltf_resource_name];
-		// TBD: parseAndLoadGLB for glb files
-		gltf_struct = GLTF.parseAndLoadWithBuffer(json, function(index: Int, uri: String): Bytes {
-			if(Utils.safeLen(uri) > 0){
-				log("Buffer used: idx"+index+", uri"+uri);
-				var dat = gltf_resources[uri];
-				if(dat != null){
-					return Bytes.ofData(dat);
+		try {
+			var json = gltf_resources[gltf_resource_name];
+			// TBD: parseAndLoadGLB for glb files
+			gltf_struct = GLTF.parseAndLoadWithBuffer(json, function(index: Int, uri: String): Bytes {
+				if(Utils.safeLen(uri) > 0){
+					// TBD: base64 encoding in uri
+					var dat = gltf_resources[uri];
+					if(dat != null){
+						log("buffer used: idx="+index+", uri="+uri);
+						return Bytes.ofData(dat);
+					}
 				}
-			}
-			llog("error: gltf_resources, buffer not found (idx"+index+",uri"+uri+")");
-			return Bytes.alloc(0);
-		});
-		
+				log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
+				return Bytes.alloc(0);
+			});
+		}catch (e : Any) {
+			log_e("exception: GLTF parsing failed");
+			return null;
+		}
+		// First pass - hierarchy
+
+		// Second pass - TRS setup
 		return gltf_root;
 	}
 
@@ -128,8 +136,7 @@ class GLTFScene {
 				}
 			}
 			enumFields(gltf_content);
-		}
-		catch (e : Any) {
+		} catch (e : Any) {
 			log("extractExternalResources: invalid json");
 			return null;
 		}
