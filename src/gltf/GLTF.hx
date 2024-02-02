@@ -96,17 +96,17 @@ class GLTF {
         return load(parse(src), buffers);
     }
 
-    public inline static function parseAndLoadWithBuffer(src: String, bufferGetter: Int->Bytes): GLTF {
+    public inline static function parseAndLoadWithBuffer(src: String, bufferGetter:  (Int,String)->Bytes): GLTF {
         return loadWithBufferGetter(parse(src), bufferGetter);
     }
 
     public static function load(raw:TGLTF, buffers:Array<Bytes>):GLTF {
-        return loadWithBufferGetter(raw, function(index: Int): Bytes {
+        return loadWithBufferGetter(raw, function(index: Int, uri: String): Bytes {
             return buffers[index];
         });
     }
 
-    public static function loadWithBufferGetter(raw: TGLTF, bufferGetter: Int->Bytes): GLTF {
+    public static function loadWithBufferGetter(raw: TGLTF, bufferGetter: (Int,String)->Bytes): GLTF {
         var gltf:GLTF = new GLTF();
 
         gltf.nodes = Node.preloadFromRaw(gltf, raw);
