@@ -17,6 +17,7 @@ import starling.display.DisplayObjectContainer;
 # CONVENTIONS:
 - gLTF and all resources requered are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
 - gLTF can be parsed for external files list in advance - so they can be loaded before scene creation
+- Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
 
 - By default all nodes are visible after creation. This can be further altered with Compositions
 
@@ -45,6 +46,7 @@ class GLTFScene {
 	public var gltf_struct:GLTF;
 	public var gltf_root: DisplayObjectContainer;
 	public var gltf_load_warnings: Array<String>;
+	public var kMeters3D_to_Pixels2D_ratio = 0.01;
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
