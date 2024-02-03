@@ -24,11 +24,18 @@
 	<window width="1920" height="1080" orientation="landscape" background="0x000000" />
 	<window depth-buffer="true" stencil-buffer="true" fps="60" hardware="true" vsync="true" />
 	<window resizable="true"/>
+	<assets path="test_scene" include="*.*" embed="false" />
 	
 	<haxedef name="haxeJSON"/>
 	<haxelib name="starling" />
 	<haxelib name="openfl" />
 	<source path="../src" />
-
+	<section if="windows">
+		<haxedef name="HXCPP_CHECK_POINTER" />
+		<haxedef name="HXCPP_STACK_TRACE" />
+		<haxedef name="HXCPP_STACK_LINE" />
+		<haxedef name="HXCPP_DEBUG_LINK" />
+		<echo value="- Compilation trait: windows: extended stacktraces" />
+	</section>
 </project>
 
