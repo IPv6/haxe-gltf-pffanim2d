@@ -6,6 +6,7 @@ import starling.display.Stage;
 import starling.display.Sprite;
 import starling.display.DisplayObject;
 import openfl.utils.ByteArray;
+import starling.display.DisplayObjectContainer;
 
 typedef VectorF = Vector<Float>;
 typedef ArrayF = Array<Float>;
@@ -14,22 +15,6 @@ typedef ArrayS = Array<String>;
 typedef ArrayA = Array<Any>;
 typedef MapS2A = Map<String,Any>;
 abstract Either<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
-
-class SpriteProps {
-	public function new(){};
-	public var x:Float = 0;
-	public var y:Float = 0;
-	public var pivotX:Float = 0;
-	public var pivotY:Float = 0;
-	public var scaleX:Float = 1;
-	public var scaleY:Float = 1;
-	public var rotation:Float = 0;
-	public var alpha:Float = 1;
-	public var visible:Bool = true;
-	public function toString():String {
-		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha}/${visible}]';
-	}
-}
 
 class Utils {
 	private function new(){};
@@ -125,9 +110,9 @@ class Utils {
 		return bytes;
 	}
 
-	static public function dumpSprite(spr:DisplayObject, props:SpriteProps):SpriteProps {
+	static public function dumpSprite(spr:DisplayObject, props:SSAnimNode.SSBaseProps):SSAnimNode.SSBaseProps {
 		if(props == null){
-			props = new SpriteProps();
+			props = new SSAnimNode.SSBaseProps();
 		}
 		props.visible = spr.visible;
 		props.alpha = spr.alpha;
@@ -140,7 +125,7 @@ class Utils {
 		props.rotation = spr.rotation;
 		return props;
 	}
-	static public function undumpSprite(spr:DisplayObject, props:SpriteProps):Void {
+	static public function undumpSprite(spr:DisplayObject, props:SSAnimNode.SSBaseProps):Void {
 		spr.visible = props.visible;
 		spr.alpha = props.alpha;
 		spr.x = props.x;
@@ -150,5 +135,19 @@ class Utils {
 		spr.scaleX = props.scaleX;
 		spr.scaleY = props.scaleY;
 		spr.rotation = props.rotation;
+	}
+
+	static public function getHierarchyChain(spr:DisplayObjectContainer):Array<DisplayObjectContainer> {
+		var result:Array<DisplayObjectContainer> = [];
+		if(spr == null){
+			return result;
+		}
+		result.push(spr);
+		var pp:DisplayObjectContainer = spr.parent;
+		while (pp != null){
+			result.push(pp);
+			pp = pp.parent;
+		}
+		return result;
 	}
 }

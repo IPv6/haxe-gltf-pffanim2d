@@ -1,6 +1,7 @@
 package starling.gltf;
 
 
+import sys.net.UdpSocket;
 import gltf.*;
 import haxe.io.Bytes;
 import openfl.utils.ByteArray;
@@ -47,7 +48,7 @@ class GLTFScene {
 
 	public var gltf_struct: GLTF = null;
 	public var gltf_root: DisplayObjectContainer = null;// first node with NO PARENTS
-	public var nodes_list: Array<DisplayObjectContainer> = null;// Plain list of Starling objects (same order as gLTF nodes)
+	public var nodes_list: Array<SSAnimNode> = null;// Plain list of Starling objects (same order as gLTF nodes)
 
 	public var gltf_load_warnings: Utils.ArrayS = null;
 	// Blindness conversion between gLTF translations/locations and pixels
@@ -70,7 +71,7 @@ class GLTFScene {
 	{
 		gltf_load_warnings = new Array<String>();
 		if(gltf_node_generator == null){
-			gltf_node_generator = defaultStarlingNodeGenerator;
+			gltf_node_generator = defaultStarlingSpriteGenerator;
 		}
 		function log_e(message:String) {
 			gltf_load_warnings.push(message);
@@ -167,10 +168,16 @@ class GLTFScene {
 			}
 			var extras = nd.extras;
 			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
-			var starling_node:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
-			if(starling_node == null){
-				starling_node = new starling.display.Sprite();
+			var node_sprite:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
+			if(node_sprite == null){
+				node_sprite = new starling.display.Sprite();
 			}
+			var starling_node = new SSAnimNode();
+			node_sprite.name = nd.name;
+			starling_node.gltf_id = nd.id;
+			starling_node.extras = extras;
+			starling_node.sprite = node_sprite;
+			Utils.dumpSprite(node_sprite, starling_node);
 			nodes_list.push(starling_node);
 		}
 
@@ -178,42 +185,42 @@ class GLTFScene {
 		// - gltf_root = first node with NO PARENTS
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
+			var node_sprite = starling_node.sprite;
 			var gltf_node = gltf_struct.nodes[i];
 			if(gltf_node.children!=null && gltf_node.children.length > 0){
 				for ( j in 0...(gltf_node.children.length) ){
 					var child_id = gltf_node.children[j].id;
 					var child_starling_node = nodes_list[child_id];
-					var child_gltf_node = gltf_struct.nodes[child_id];
-					if(child_starling_node.parent != null){
-						log_e("warning: node parent not empty: "+child_gltf_node.name);
+					var child_node_sprite = child_starling_node.sprite;
+					if(child_node_sprite.parent != null){
+						log_e("warning: node parent not empty: "+child_node_sprite.name);
 					}
-					starling_node.addChild(child_starling_node);
+					node_sprite.addChild(child_node_sprite);
 					// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
 				}
 			}
 		}
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
-			if(starling_node.parent == null){
+			var node_sprite = starling_node.sprite;
+			if(gltf_root == null && node_sprite.parent == null){
 				// var gltf_node = gltf_struct.nodes[i];
 				// trace("- found root", gltf_node.id, gltf_node.name);
-				gltf_root = starling_node;
-				break;
+				gltf_root = node_sprite;
 			}
+			var hierarchy = Utils.getHierarchyChain(node_sprite);
+			var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
+			starling_node.full_path = hierarchy_names.join("/");
+			// var spr_props = Utils.dumpSprite(starling_node, null);
+			// trace("Sprite dump", starling_node.sprite.name, starling_node.full_path, starling_node.toString());
 		}
-		// for ( i in 0...(nodes_list.length) ){
-		// 	var starling_node = nodes_list[i];
-		// 	var gltf_node = gltf_struct.nodes[i];
-		// 	var spr_props = Utils.dumpSprite(starling_node, null);
-		// 	trace("Sprite dump", gltf_node.name, spr_props.toString());
-		// }
 		if(gltf_root == null){
 			log_e("warning: scene root not found");
 		}
 		return gltf_root;
 	}
 
-	public static function defaultStarlingNodeGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, extras:Dynamic):DisplayObjectContainer {
+	public static function defaultStarlingSpriteGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, extras:Dynamic):DisplayObjectContainer {
 		var pos_x = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
 		var pos_y = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
 		var scale_x = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
@@ -229,7 +236,7 @@ class GLTFScene {
 			bbox_max_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0] + 3];
 			bbox_max_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1] + 3];
 		}
-		var spr_props:Utils.SpriteProps = new Utils.SpriteProps();
+		var spr_props:SSAnimNode.SSBaseProps = new SSAnimNode.SSBaseProps();
 		var defl_spr = new starling.display.Sprite();
 		if(node_texture != null){
 			// Quad
@@ -238,10 +245,8 @@ class GLTFScene {
 			var defl_quad = new starling.display.Quad(quad_w, quad_h);
 			defl_quad.texture = node_texture;
 			defl_spr.addChild(defl_quad);
-			spr_props.pivotX = quad_w*0.5;
-			spr_props.pivotY = quad_h*0.5;
-			// spr_props.pivotX = (bbox_min_x+bbox_max_x) * 0.5;
-			// spr_props.pivotY = (bbox_min_y+bbox_max_y) * 0.5;
+			spr_props.pivotX = quad_w*0.5 - (bbox_min_x+bbox_max_x) * 0.5;
+			spr_props.pivotY = quad_h*0.5 - (bbox_min_y+bbox_max_y) * 0.5;
 		}
 		spr_props.visible = true;
 		spr_props.alpha = 1.0;
@@ -321,7 +326,7 @@ class GLTFScene {
 
 	/**
 	* Store composition visibility rules (according to visible_set/hidden_set) for future use
-	* visible_set/hidden_set contain strings that checked against each node full path in form "root-name/child-name/.../node-name"
+	* visible_set/hidden_set contain strings that checked against each node full_path in form "root-name/child-name/.../node-name"
 	* visible_set/hidden_set may contain "*" string, which matches all nodes
 	**/
 	public function addComposition(composition_name:String, visible_set:Utils.ArrayS, hidden_set:Utils.ArrayS):Void
