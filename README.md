@@ -15,6 +15,12 @@ Such object will have special meaning for animation in Starling:
 - Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer
 - if ScaleX && ScaleY == 0.0 clipping mask ignored completely (on load, no realtime overhead), while alpha animation with ScaleZ still can be used
 
+# TODO
+
+- base64 in URIs (buffers, images)
+- GLB parsing support && embedded PNGs/JPGs/BINs
+- Auto-packing into atlas?
+
 # Run demo
 
 ```

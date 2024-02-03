@@ -1,10 +1,16 @@
 package starling.gltf;
 
+import haxe.io.Bytes;
+import haxe.ds.Vector;
+import openfl.utils.ByteArray;
+
+typedef VectorF = Vector<Float>;
 typedef ArrayF = Array<Float>;
 typedef ArrayI = Array<Int>;
 typedef ArrayS = Array<String>;
 typedef ArrayA = Array<Any>;
 typedef MapS2A = Map<String,Any>;
+abstract Either<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
 
 class Utils {
 	private function new(){};
@@ -47,6 +53,57 @@ class Utils {
 			}
 		}
 		return cnt;
+	}
+
+	static public function xyz2xyzScaled(pos:Either<ArrayF,VectorF>, scale:Float = 1.0):ArrayF {
+		if(pos == null){
+			return [0.0,0.0,0.0];
+		}
+		return [pos[0]*scale, pos[1]*scale, pos[2]*scale];
+	}
+
+	static public function quaternion2euler(quat:Either<ArrayF,VectorF>):ArrayF {
+		// quat expected to be NORMALIZED
+		// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+		// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
+
+		if(quat == null){
+			return [0.0, 0.0, 0.0];
+		}
+		var qx = quat[0];
+		var qy = quat[1];
+		var qz = quat[2];
+		var qw = quat[3];
+
+		// roll (x-axis rotation)
+		var sinr_cosp = 2 * (qw * qx + qy * qz);
+		var cosr_cosp = 1 - 2 * (qx * qx + qy * qy);
+		var roll = Math.atan2(sinr_cosp, cosr_cosp);
+	
+		// pitch (y-axis rotation)
+		var sinp = Math.sqrt(1 + 2 * (qw * qy - qx * qz));
+		var cosp = Math.sqrt(1 - 2 * (qw * qy - qx * qz));
+		var pitch = 2 * Math.atan2(sinp, cosp) - Math.PI / 2;
+	
+		// yaw (z-axis rotation)
+		var siny_cosp = 2 * (qw * qz + qx * qy);
+		var cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
+		var yaw = Math.atan2(siny_cosp, cosy_cosp);
+	
+		return [roll, pitch, yaw];
+	}
+
+	// openfl.utils.ByteArray -> haxe.io.Bytes
+	static public function openflByteArray2haxeBytes(byteArray:Null<ByteArray>):Bytes {
+		if(byteArray == null){
+			return Bytes.alloc(0);
+		}
+		byteArray.position = 0;
+		var bytes:Bytes = Bytes.alloc(byteArray.length);
+		while (byteArray.bytesAvailable > 0) {
+			bytes.set(byteArray.position, byteArray.readByte());
+		}
+		return bytes;
 	}
 
 }

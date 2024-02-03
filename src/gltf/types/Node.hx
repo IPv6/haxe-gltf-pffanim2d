@@ -17,6 +17,7 @@ class Node {
     public var scale(default, null):Null<Vector<Float>> = null;
     public var translation(default, null):Null<Vector<Float>> = null;
     public var weights(default, null):Null<Vector<Float>> = null;
+    public var extras(default, null):Dynamic = null;
 
     function new() {}
 
@@ -36,6 +37,7 @@ class Node {
         if(node.scale != null) scale = Vector.fromArrayCopy(node.scale);
         if(node.translation != null) translation = Vector.fromArrayCopy(node.translation);
         if(node.weights != null) weights = Vector.fromArrayCopy(node.weights);
+        if(node.extras != null) extras = node.extras;
     }
 
     static function preloadFromRaw(gltf:GLTF, raw:TGLTF):Vector<Node> {

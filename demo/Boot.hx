@@ -127,6 +127,10 @@ class Boot extends openfl.display.Sprite
 		}
 		var gscene = new GLTFScene();
 		// Custom loading options setup: gscene.<props> = ...
-		var root = gscene.createSceneTree( "root", gltf_res, null);
+		var gltf_root = gscene.createSceneTree("root", gltf_res, null);
+		trace("- loading warnings/errors", gscene.gltf_load_warnings);
+		if(gltf_root != null){
+			_root.addChild(gltf_root);
+		}
 	}
 }

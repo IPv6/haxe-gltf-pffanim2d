@@ -5,13 +5,13 @@ import gltf.*;
 import haxe.io.Bytes;
 import openfl.utils.ByteArray;
 import starling.core.Starling;
-import starling.textures.Texture;
 import starling.events.*;
 import starling.display.Sprite;
 import starling.display.Image;
 import starling.display.Stage;
 import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
+import starling.textures.Texture;
 
 /**
 
@@ -44,18 +44,24 @@ import starling.display.DisplayObjectContainer;
 class GLTFScene {
 	public function new(){};
 
-	public var gltf_struct:GLTF;
-	public var gltf_root: DisplayObjectContainer;
-	public var gltf_load_warnings: Array<String>;
-	public var kMeters3D_to_Pixels2D_ratio = 0.01;
+	public var gltf_struct:GLTF = null;
+	public var gltf_root: DisplayObjectContainer = null;// first node with NO PARENTS
+	public var nodes_list: Array<DisplayObject> = null;// Plain list of Starling objects (same order as gLTF nodes)
+
+	public var gltf_load_warnings: Utils.ArrayS = null;
+	// Blindness conversion between gLTF translations/locations and pixels
+	public var kPixels2D_to_Meters3D_ratio = 0.01;
+	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
+	public var kMetersXYZ_to_PixelsXY = [0,2];// px_x = loc[0], px_y = loc[2]
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
 	* @param gltf_resource_name: glft-file key in gltf_resources
 	* @param gltf_resources: all resources required for glft loading. key: <file name>, value: starling.AssetManager.getAsset(<asset for key>)
 	* @param gltf_node_generators: custom node generators-functions. Useful to place actual button in place of some node - instead of default display.Image with button texture
-	* @return True if no errors. In case of errors/warnings gltf_load_warnings will be filled with explanations
-	* In case of error scene creation will continue (on best-effort fallbacks possible)
+	* @return root DisplayObject if no errors or null.
+	* In case of errors/warnings gltf_load_warnings will be filled with explanations
+	* In case of scene creation problems process will continue with best-effort fallbacks, is possible
 	**/
 	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, gltf_node_generators:Map<String,Dynamic>): DisplayObjectContainer
 	{
@@ -74,15 +80,10 @@ class GLTFScene {
 				var byteArray:ByteArray = cast(dat, ByteArray);
 				if(byteArray != null){
 					log("buffer used: idx="+index+", uri="+uri);
-					// log_e("// buffer getter: unexpected type: " + Type.typeof(dat));
-					// return Bytes.ofData(dat);
-					byteArray.position = 0;
-					var bytes:Bytes = Bytes.alloc(byteArray.length);
-					while (byteArray.bytesAvailable > 0) {
-						bytes.set(byteArray.position, byteArray.readByte());
-					}
-					return bytes;
+					return Utils.openflByteArray2haxeBytes(byteArray);
 				}
+				log_e("warning: buffer getter: unexpected type: " + Type.typeof(dat));
+				// return Bytes.ofData(dat);
 			}
 			log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
 			return Bytes.alloc(0);
@@ -95,7 +96,7 @@ class GLTFScene {
 			log_e("error: gltf_resources[gltf_resource_name] == null");
 			return null;
 		}
-		// try {
+		try {
 			var json_raw = gltf_resources[gltf_resource_name];
 			if(Std.isOfType(json_raw,String)){
 				gltf_struct = GLTF.parseAndLoadWithBuffer(json_raw, resource_by_uri);
@@ -104,19 +105,73 @@ class GLTFScene {
 				var json_str = haxe.Json.stringify(json_raw);
 				gltf_struct = GLTF.parseAndLoadWithBuffer(json_str, resource_by_uri);
 			}else{
-				// ByteArray
-				// TBD: parseAndLoadGLB for glb files
-				log_e("error: glb not supported yet");
+				// TBD: ByteArray? parseAndLoadGLB for glb files
+				log_e("warning: glb not supported yet");
 			}
-		// }catch (e : Any) {
-		// 	trace("GLTF parsing exception", e);
-		// 	log_e("exception: GLTF parsing failed");
-		// 	return null;
-		// }
-
+		}catch (e : Any) {
+			trace("GLTF parsing exception", e);
+			log_e("error: GLTF parsing exception");
+		}
+		if(gltf_struct == null){
+			log_e("error: GLTF == null");
+			return null;
+		}
 		// First pass - Creating all nodes separately
+		nodes_list = [];
+		for(nd in gltf_struct.nodes){
+			var name = nd.name;
+			var trs_location_px = Utils.xyz2xyzScaled(nd.translation, kMeters3D_to_Pixels2D_ratio);
+			var trs_scale = Utils.xyz2xyzScaled(nd.scale);
+			var trs_rotation_eulerXYZ = Utils.quaternion2euler(nd.rotation);
+			var bbox:Utils.ArrayF = null;
+			var texture:Texture = null;
+			if(nd.mesh != null && Utils.safeLen(nd.mesh.primitives) > 0){
+				var prim = nd.mesh.primitives[0];
+				if(prim.material != null){
+					var mat_id = prim.material;
+					var mat = gltf_struct.material[mat_id];
+					if(mat != null && mat.pbrMetallicRoughness != null){
+						var pbr = mat.pbrMetallicRoughness;
+						if(pbr != null && pbr.baseColorTexture != null){
+							var tex_id = pbr.baseColorTexture.index;
+							var tex = gltf_struct.textures[tex_id];
+							if(tex != null && tex.image != null){
+								var dat = gltf_resources[tex.image.uri];
+								if(dat != null){
+									texture = cast(dat, Texture);
+								}else{
+									log_e("warning: texture not found, node: "+nd.name+", uri: "+tex.image.uri);
+								}
+							}
+						}
+					}else{
+						log_e("warning: mat not found, node: "+nd.name);
+					}
+				}
+				if(prim.attributes != null){
+					// Positions. getting BBOX directly fomr min-max
+					for(att in prim.attributes){
+						if(att.name == "POSITION" && att.accessor != null){
+							var bbox_min_px = Utils.xyz2xyzScaled(att.accessor.min, kMeters3D_to_Pixels2D_ratio);
+							var bbox_max_px = Utils.xyz2xyzScaled(att.accessor.max, kMeters3D_to_Pixels2D_ratio);
+							bbox = bbox_min_px.concat(bbox_max_px);
+						}
+					}
+				}
+			}
+			var extras = nd.extras;
+			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox, extras);
+			var starling_node: DisplayObjectContainer = null;
+			nodes_list.push(starling_node);
+		}
 
-		// Second pass - Setup hierarchy
+		// Second pass - Setup hierarchy, gltf_root detection
+		// - first node with NO PARENTS
+		for ( i in 0...(nodes_list.length) ){
+			var starling_node = nodes_list[i];
+			var gltf_node = gltf_struct.nodes[i];
+		}
+
 		return gltf_root;
 	}
 
