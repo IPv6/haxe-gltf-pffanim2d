@@ -9,6 +9,7 @@
 gLTF does not support non-TRS animation targets. So some extra efforts required to make it happen with Blender && gLTF.
 For this purpuse some Nodes are served as "placeholders" for such animations.
 Each Empty (in Blender) can contain Plane (quad) Mesh object with the name "#pff:mask".
+Plane(Quad) can have origin offset - offset converted to Sprite pivot by default
 Such object will have special meaning for animation in Starling:
 - ScaleZ = alpha value on parent DisplayObjectContainer
 - Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer
@@ -20,7 +21,7 @@ Such object will have special meaning for animation in Starling:
 haxelib install openfl
 haxelib install starling
 cd ./demo
-openfl test mac
+openfl test <win/mac/...>
 ```
 
 # Run tests

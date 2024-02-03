@@ -22,8 +22,9 @@ class Buffer {
     static function loadFromRawWithGetter(gltf: GLTF, raw: TGLTF, getter: (Int,String)->Bytes): Vector<Buffer> {
         var buffers:Vector<Buffer> = new Vector<Buffer>(raw.buffers.length);
         for(i in 0...raw.buffers.length) {
+            var gres = getter(i, raw.buffers[i].uri);
             buffers[i] = new Buffer();
-            buffers[i].load(gltf, raw.buffers[i], getter(i,raw.buffers[i].uri));
+            buffers[i].load(gltf, raw.buffers[i], gres);
         }
         return buffers;
     }

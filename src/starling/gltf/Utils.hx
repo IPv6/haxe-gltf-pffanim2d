@@ -1,5 +1,11 @@
 package starling.gltf;
 
+typedef ArrayF = Array<Float>;
+typedef ArrayI = Array<Int>;
+typedef ArrayS = Array<String>;
+typedef ArrayA = Array<Any>;
+typedef MapS2A = Map<String,Any>;
+
 class Utils {
 	private function new(){};
 
@@ -42,4 +48,5 @@ class Utils {
 		}
 		return cnt;
 	}
+
 }

@@ -30,12 +30,12 @@
 	<haxelib name="starling" />
 	<haxelib name="openfl" />
 	<source path="../src" />
-	<section if="windows">
+	<section if="windows || mac">
 		<haxedef name="HXCPP_CHECK_POINTER" />
 		<haxedef name="HXCPP_STACK_TRACE" />
 		<haxedef name="HXCPP_STACK_LINE" />
 		<haxedef name="HXCPP_DEBUG_LINK" />
-		<echo value="- Compilation trait: windows: extended stacktraces" />
+		<echo value="- Compilation trait: extended stacktraces" />
 	</section>
 </project>
 

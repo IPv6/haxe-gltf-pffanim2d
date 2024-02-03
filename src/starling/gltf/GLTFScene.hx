@@ -3,6 +3,7 @@ package starling.gltf;
 
 import gltf.*;
 import haxe.io.Bytes;
+import openfl.utils.ByteArray;
 import starling.core.Starling;
 import starling.textures.Texture;
 import starling.events.*;
@@ -63,6 +64,29 @@ class GLTFScene {
 			gltf_load_warnings.push(message);
 			log(message);
 		}
+		function resource_by_uri(index: Int, uri: String): Bytes {
+			if(Utils.safeLen(uri) > 0){
+				// TBD: base64 encoding in uri
+				var dat = gltf_resources[uri];
+				// if (Std.is(data, String))
+				// if (Std.is(data, Bytes)) {
+				// if (Std.is(data, ByteArrayData))
+				var byteArray:ByteArray = cast(dat, ByteArray);
+				if(byteArray != null){
+					log("buffer used: idx="+index+", uri="+uri);
+					// log_e("// buffer getter: unexpected type: " + Type.typeof(dat));
+					// return Bytes.ofData(dat);
+					byteArray.position = 0;
+					var bytes:Bytes = Bytes.alloc(byteArray.length);
+					while (byteArray.bytesAvailable > 0) {
+						bytes.set(byteArray.position, byteArray.readByte());
+					}
+					return bytes;
+				}
+			}
+			log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
+			return Bytes.alloc(0);
+		};
 		if(Utils.safeLen(gltf_resource_name) == 0 || Utils.safeLen(gltf_resources) == 0){
 			log_e("error: !gltf_resource_name || !gltf_resources");
 			return null;
@@ -71,28 +95,28 @@ class GLTFScene {
 			log_e("error: gltf_resources[gltf_resource_name] == null");
 			return null;
 		}
-		try {
-			var json = gltf_resources[gltf_resource_name];
-			// TBD: parseAndLoadGLB for glb files
-			gltf_struct = GLTF.parseAndLoadWithBuffer(json, function(index: Int, uri: String): Bytes {
-				if(Utils.safeLen(uri) > 0){
-					// TBD: base64 encoding in uri
-					var dat = gltf_resources[uri];
-					if(dat != null){
-						log("buffer used: idx="+index+", uri="+uri);
-						return Bytes.ofData(dat);
-					}
-				}
-				log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
-				return Bytes.alloc(0);
-			});
-		}catch (e : Any) {
-			log_e("exception: GLTF parsing failed");
-			return null;
-		}
-		// First pass - hierarchy
+		// try {
+			var json_raw = gltf_resources[gltf_resource_name];
+			if(Std.isOfType(json_raw,String)){
+				gltf_struct = GLTF.parseAndLoadWithBuffer(json_raw, resource_by_uri);
+			}else if(Type.typeof(json_raw) == Type.ValueType.TObject ){
+				// Can be object parsed by Starling, converting to JSON string...
+				var json_str = haxe.Json.stringify(json_raw);
+				gltf_struct = GLTF.parseAndLoadWithBuffer(json_str, resource_by_uri);
+			}else{
+				// ByteArray
+				// TBD: parseAndLoadGLB for glb files
+				log_e("error: glb not supported yet");
+			}
+		// }catch (e : Any) {
+		// 	trace("GLTF parsing exception", e);
+		// 	log_e("exception: GLTF parsing failed");
+		// 	return null;
+		// }
 
-		// Second pass - TRS setup
+		// First pass - Creating all nodes separately
+
+		// Second pass - Setup hierarchy
 		return gltf_root;
 	}
 
@@ -101,7 +125,7 @@ class GLTFScene {
 	* @param gltf_resource_name: glft-file key in gltf_resources
 	* @param gltf_resources: glft/glb file must be present
 	**/
-	public static function extractExternalResources(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>):Array<String>
+	public static function extractExternalResources(gltf_resource_name:String, gltf_resources:Utils.MapS2A):Utils.ArrayS
 	{
 		if(Utils.safeLen(gltf_resource_name) == 0 || Utils.safeLen(gltf_resources) == 0){
 			log("extractExternalResources: invalid input");
@@ -111,20 +135,35 @@ class GLTFScene {
 			log("extractExternalResources: invalid input");
 			return null;
 		}
-		var externals_map:Array<String> = [];
+		var json_raw = gltf_resources[gltf_resource_name];
+		var json_str:String = "";
+		if(Std.isOfType(json_raw,String)){
+			json_str = json_raw;
+		}else if(Type.typeof(json_raw) == Type.ValueType.TObject ){
+			// Can be object parsed by Starling, converting to JSON string...
+			json_str = haxe.Json.stringify(json_raw);
+		}else{
+			// ByteArray
+			// TBD: parseAndLoadGLB for glb files
+			log("extractExternalResources: glb not supported yet");
+			return null;
+		}
+		var externals_map:Utils.ArrayS = [];
 		var gltf_content:haxe.DynamicAccess<Dynamic> = null;
 		try {
-			gltf_content = haxe.Json.parse(gltf_resources[gltf_resource_name]);
+			gltf_content = haxe.Json.parse(json_str);
 			function enumFields(dynobj:haxe.DynamicAccess<Dynamic>):Void {
 				for (key in dynobj.keys()){
 					var val = dynobj.get(key);
 					// trace("- ", key, val, Type.typeof(val));
 					if(key == "uri" && Std.isOfType(val, String)){
-						externals_map.push(val);
+						if(externals_map.indexOf(val) < 0){
+							externals_map.push(val);
+						}
 						continue;
 					}
 					if( Std.isOfType(val, Array) ){ // Std.isOfType(val, List) ||
-						for(val2 in cast(val,Array<Dynamic>)){
+						for(val2 in cast(val, Array<Dynamic>)){
 							if(Type.typeof(val2) == Type.ValueType.TObject ){
 								// trace("- > ARR", key);
 								enumFields(val2);
@@ -150,7 +189,7 @@ class GLTFScene {
 	* visible_set/hidden_set contain strings that checked against each node full path in form "root-name/child-name/.../node-name"
 	* visible_set/hidden_set may contain "*" string, which matches all nodes
 	**/
-	public function addComposition(composition_name:String, visible_set:Array<String>, hidden_set:Array<String>):Void
+	public function addComposition(composition_name:String, visible_set:Utils.ArrayS, hidden_set:Utils.ArrayS):Void
 	{
 		return;
 	}
