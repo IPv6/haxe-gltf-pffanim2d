@@ -166,17 +166,17 @@ class GLTFScene {
 					}
 				}
 			}
-			var extras = nd.extras;
-			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
-			var node_sprite:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
+			var customprops = nd.extras;
+			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
+			var node_sprite:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
 			if(node_sprite == null){
 				node_sprite = new starling.display.Sprite();
 			}
 			var starling_node = new SSAnimNode();
 			node_sprite.name = nd.name;
 			starling_node.gltf_id = nd.id;
-			starling_node.extras = extras;
 			starling_node.sprite = node_sprite;
+			starling_node.customprops = customprops;
 			Utils.dumpSprite(node_sprite, starling_node);
 			nodes_list.push(starling_node);
 		}
@@ -195,6 +195,7 @@ class GLTFScene {
 					if(child_node_sprite.parent != null){
 						log_e("warning: node parent not empty: "+child_node_sprite.name);
 					}
+					child_starling_node.gltf_parent_id = starling_node.gltf_id;
 					node_sprite.addChild(child_node_sprite);
 					// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
 				}
@@ -220,16 +221,16 @@ class GLTFScene {
 		return gltf_root;
 	}
 
-	public static function defaultStarlingSpriteGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, extras:Dynamic):DisplayObjectContainer {
+	public static function defaultStarlingSpriteProps(scene:GLTFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):SSAnimNode.SSBaseProps {
 		var pos_x = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
 		var pos_y = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
 		var scale_x = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
 		var scale_y = trs_scale[scene.kMetersXYZ_to_PixelsXY[1]];
 		var rotation = trs_rotation_eulerXYZ[scene.kEulerXYZ_to_PixelsRot];
-		var bbox_min_x = pos_x;
-		var bbox_min_y = pos_y;
-		var bbox_max_x = pos_x;
-		var bbox_max_y = pos_y;
+		var bbox_min_x = 0;
+		var bbox_min_y = 0;
+		var bbox_max_x = 0;
+		var bbox_max_y = 0;
 		if(bbox_px != null){
 			bbox_min_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0]];
 			bbox_min_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1]];
@@ -237,17 +238,6 @@ class GLTFScene {
 			bbox_max_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1] + 3];
 		}
 		var spr_props:SSAnimNode.SSBaseProps = new SSAnimNode.SSBaseProps();
-		var defl_spr = new starling.display.Sprite();
-		if(node_texture != null){
-			// Quad
-			var quad_w = bbox_max_x-bbox_min_x;
-			var quad_h = bbox_max_y-bbox_min_y;
-			var defl_quad = new starling.display.Quad(quad_w, quad_h);
-			defl_quad.texture = node_texture;
-			defl_spr.addChild(defl_quad);
-			spr_props.pivotX = quad_w*0.5 - (bbox_min_x+bbox_max_x) * 0.5;
-			spr_props.pivotY = quad_h*0.5 - (bbox_min_y+bbox_max_y) * 0.5;
-		}
 		spr_props.visible = true;
 		spr_props.alpha = 1.0;
 		spr_props.x = pos_x;
@@ -255,6 +245,22 @@ class GLTFScene {
 		spr_props.scaleX = scale_x;
 		spr_props.scaleY = scale_y;
 		spr_props.rotation = rotation;
+		spr_props.bbox_w = bbox_max_x-bbox_min_x;
+		spr_props.bbox_h = bbox_max_y-bbox_min_y;
+		spr_props.pivotX = spr_props.bbox_w*0.5 - (bbox_min_x+bbox_max_x) * 0.5;
+		spr_props.pivotY = spr_props.bbox_h*0.5 - (bbox_min_y+bbox_max_y) * 0.5;
+		return spr_props;
+	}
+
+	public static function defaultStarlingSpriteGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
+		var spr_props:SSAnimNode.SSBaseProps = defaultStarlingSpriteProps(scene, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+		var defl_spr = new starling.display.Sprite();
+		if(node_texture != null){
+			// Quad
+			var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
+			defl_quad.texture = node_texture;
+			defl_spr.addChild(defl_quad);
+		}
 		Utils.undumpSprite(defl_spr, spr_props);
 		// trace("Sprite init", node_name, spr_props.toString());
 		return defl_spr;
