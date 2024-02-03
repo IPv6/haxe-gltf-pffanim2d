@@ -130,6 +130,8 @@ class Boot extends openfl.display.Sprite
 		var gltf_root = gscene.createSceneTree("root", gltf_res, null);
 		trace("- loading warnings/errors", gscene.gltf_load_warnings);
 		if(gltf_root != null){
+			gltf_root.x = _starling.stage.stageWidth * 0.5;
+			gltf_root.y = _starling.stage.stageHeight * 0.5;
 			_root.addChild(gltf_root);
 		}
 	}

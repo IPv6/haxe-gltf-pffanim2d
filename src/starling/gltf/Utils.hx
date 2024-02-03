@@ -2,6 +2,9 @@ package starling.gltf;
 
 import haxe.io.Bytes;
 import haxe.ds.Vector;
+import starling.display.Stage;
+import starling.display.Sprite;
+import starling.display.DisplayObject;
 import openfl.utils.ByteArray;
 
 typedef VectorF = Vector<Float>;
@@ -11,6 +14,22 @@ typedef ArrayS = Array<String>;
 typedef ArrayA = Array<Any>;
 typedef MapS2A = Map<String,Any>;
 abstract Either<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
+
+class SpriteProps {
+	public function new(){};
+	public var x:Float = 0;
+	public var y:Float = 0;
+	public var pivotX:Float = 0;
+	public var pivotY:Float = 0;
+	public var scaleX:Float = 1;
+	public var scaleY:Float = 1;
+	public var rotation:Float = 0;
+	public var alpha:Float = 1;
+	public var visible:Bool = true;
+	public function toString():String {
+		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha}/${visible}]';
+	}
+}
 
 class Utils {
 	private function new(){};
@@ -106,4 +125,30 @@ class Utils {
 		return bytes;
 	}
 
+	static public function dumpSprite(spr:DisplayObject, props:SpriteProps):SpriteProps {
+		if(props == null){
+			props = new SpriteProps();
+		}
+		props.visible = spr.visible;
+		props.alpha = spr.alpha;
+		props.x = spr.x;
+		props.y = spr.y;
+		props.pivotX = spr.pivotX;
+		props.pivotY = spr.pivotY;
+		props.scaleX = spr.scaleX;
+		props.scaleY = spr.scaleY;
+		props.rotation = spr.rotation;
+		return props;
+	}
+	static public function undumpSprite(spr:DisplayObject, props:SpriteProps):Void {
+		spr.visible = props.visible;
+		spr.alpha = props.alpha;
+		spr.x = props.x;
+		spr.y = props.y;
+		spr.pivotX = props.pivotX;
+		spr.pivotY = props.pivotY;
+		spr.scaleX = props.scaleX;
+		spr.scaleY = props.scaleY;
+		spr.rotation = props.rotation;
+	}
 }

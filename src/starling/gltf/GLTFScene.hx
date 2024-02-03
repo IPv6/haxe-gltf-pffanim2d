@@ -8,6 +8,7 @@ import starling.core.Starling;
 import starling.events.*;
 import starling.display.Sprite;
 import starling.display.Image;
+import starling.display.Quad;
 import starling.display.Stage;
 import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
@@ -30,9 +31,9 @@ import starling.textures.Texture;
 # Blender to Starling essentials:
 - Cameras, Armatures, skinning, morth tarkets, shapekeys - ignored
 - Valid blender objects: Empties for grouping, simple quads (4-vert rectangle) mesh objects
-// Quads imported as display.DisplayObjectContainer and display.Image
+// Quads imported as display.DisplayObjectContainer and starling.display.Quad by default
 // All other nodes in gLTF are ignored
-- Quads must have unlit textures, they will used for display.Image content for node
+- Quads must have unlit textures, they will used as Texture for starling node
 - Quads must be in Blender XY-plane (for top-down view)
 - Animations: Armature animations are not supported directly, must be baked on valid objects to be usable by GLTFScene
 - Animations: Actions must be stashed (Dopesheet-Action Editor) or pushed to NLA track (NLA Editor)
@@ -44,28 +45,33 @@ import starling.textures.Texture;
 class GLTFScene {
 	public function new(){};
 
-	public var gltf_struct:GLTF = null;
+	public var gltf_struct: GLTF = null;
 	public var gltf_root: DisplayObjectContainer = null;// first node with NO PARENTS
-	public var nodes_list: Array<DisplayObject> = null;// Plain list of Starling objects (same order as gLTF nodes)
+	public var nodes_list: Array<DisplayObjectContainer> = null;// Plain list of Starling objects (same order as gLTF nodes)
 
 	public var gltf_load_warnings: Utils.ArrayS = null;
 	// Blindness conversion between gLTF translations/locations and pixels
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
 	public var kMetersXYZ_to_PixelsXY = [0,2];// px_x = loc[0], px_y = loc[2]
+	public var kEulerXYZ_to_PixelsRot = 1;
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
 	* @param gltf_resource_name: glft-file key in gltf_resources
 	* @param gltf_resources: all resources required for glft loading. key: <file name>, value: starling.AssetManager.getAsset(<asset for key>)
-	* @param gltf_node_generators: custom node generators-functions. Useful to place actual button in place of some node - instead of default display.Image with button texture
+	* @param gltf_node_generator: custom node generators-functions. For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	* @return root DisplayObject if no errors or null.
 	* In case of errors/warnings gltf_load_warnings will be filled with explanations
 	* In case of scene creation problems process will continue with best-effort fallbacks, is possible
 	**/
-	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, gltf_node_generators:Map<String,Dynamic>): DisplayObjectContainer
+	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, 
+		gltf_node_generator:(GLTFScene, String, Texture, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Dynamic)->DisplayObjectContainer): DisplayObjectContainer
 	{
 		gltf_load_warnings = new Array<String>();
+		if(gltf_node_generator == null){
+			gltf_node_generator = defaultStarlingNodeGenerator;
+		}
 		function log_e(message:String) {
 			gltf_load_warnings.push(message);
 			log(message);
@@ -123,7 +129,7 @@ class GLTFScene {
 			var trs_location_px = Utils.xyz2xyzScaled(nd.translation, kMeters3D_to_Pixels2D_ratio);
 			var trs_scale = Utils.xyz2xyzScaled(nd.scale);
 			var trs_rotation_eulerXYZ = Utils.quaternion2euler(nd.rotation);
-			var bbox:Utils.ArrayF = null;
+			var bbox_px:Utils.ArrayF = null;
 			var texture:Texture = null;
 			if(nd.mesh != null && Utils.safeLen(nd.mesh.primitives) > 0){
 				var prim = nd.mesh.primitives[0];
@@ -154,25 +160,99 @@ class GLTFScene {
 						if(att.name == "POSITION" && att.accessor != null){
 							var bbox_min_px = Utils.xyz2xyzScaled(att.accessor.min, kMeters3D_to_Pixels2D_ratio);
 							var bbox_max_px = Utils.xyz2xyzScaled(att.accessor.max, kMeters3D_to_Pixels2D_ratio);
-							bbox = bbox_min_px.concat(bbox_max_px);
+							bbox_px = bbox_min_px.concat(bbox_max_px);
 						}
 					}
 				}
 			}
 			var extras = nd.extras;
-			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox, extras);
-			var starling_node: DisplayObjectContainer = null;
+			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
+			var starling_node:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, extras);
+			if(starling_node == null){
+				starling_node = new starling.display.Sprite();
+			}
 			nodes_list.push(starling_node);
 		}
 
-		// Second pass - Setup hierarchy, gltf_root detection
-		// - first node with NO PARENTS
+		// Second pass - Setup hierarchy && detecti gltf_root
+		// - gltf_root = first node with NO PARENTS
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
 			var gltf_node = gltf_struct.nodes[i];
+			if(gltf_node.children!=null && gltf_node.children.length > 0){
+				for ( j in 0...(gltf_node.children.length) ){
+					var child_id = gltf_node.children[j].id;
+					var child_starling_node = nodes_list[child_id];
+					var child_gltf_node = gltf_struct.nodes[child_id];
+					if(child_starling_node.parent != null){
+						log_e("warning: node parent not empty: "+child_gltf_node.name);
+					}
+					starling_node.addChild(child_starling_node);
+					// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
+				}
+			}
 		}
-
+		for ( i in 0...(nodes_list.length) ){
+			var starling_node = nodes_list[i];
+			if(starling_node.parent == null){
+				// var gltf_node = gltf_struct.nodes[i];
+				// trace("- found root", gltf_node.id, gltf_node.name);
+				gltf_root = starling_node;
+				break;
+			}
+		}
+		// for ( i in 0...(nodes_list.length) ){
+		// 	var starling_node = nodes_list[i];
+		// 	var gltf_node = gltf_struct.nodes[i];
+		// 	var spr_props = Utils.dumpSprite(starling_node, null);
+		// 	trace("Sprite dump", gltf_node.name, spr_props.toString());
+		// }
+		if(gltf_root == null){
+			log_e("warning: scene root not found");
+		}
 		return gltf_root;
+	}
+
+	public static function defaultStarlingNodeGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, extras:Dynamic):DisplayObjectContainer {
+		var pos_x = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
+		var pos_y = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
+		var scale_x = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
+		var scale_y = trs_scale[scene.kMetersXYZ_to_PixelsXY[1]];
+		var rotation = trs_rotation_eulerXYZ[scene.kEulerXYZ_to_PixelsRot];
+		var bbox_min_x = pos_x;
+		var bbox_min_y = pos_y;
+		var bbox_max_x = pos_x;
+		var bbox_max_y = pos_y;
+		if(bbox_px != null){
+			bbox_min_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0]];
+			bbox_min_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1]];
+			bbox_max_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0] + 3];
+			bbox_max_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1] + 3];
+		}
+		var spr_props:Utils.SpriteProps = new Utils.SpriteProps();
+		var defl_spr = new starling.display.Sprite();
+		if(node_texture != null){
+			// Quad
+			var quad_w = bbox_max_x-bbox_min_x;
+			var quad_h = bbox_max_y-bbox_min_y;
+			var defl_quad = new starling.display.Quad(quad_w, quad_h);
+			defl_quad.texture = node_texture;
+			defl_spr.addChild(defl_quad);
+			spr_props.pivotX = quad_w*0.5;
+			spr_props.pivotY = quad_h*0.5;
+			// spr_props.pivotX = (bbox_min_x+bbox_max_x) * 0.5;
+			// spr_props.pivotY = (bbox_min_y+bbox_max_y) * 0.5;
+		}
+		spr_props.visible = true;
+		spr_props.alpha = 1.0;
+		spr_props.x = pos_x;
+		spr_props.y = pos_y;
+		spr_props.scaleX = scale_x;
+		spr_props.scaleY = scale_y;
+		spr_props.rotation = rotation;
+		Utils.undumpSprite(defl_spr, spr_props);
+		// trace("Sprite init", node_name, spr_props.toString());
+		return defl_spr;
 	}
 
 	/**
