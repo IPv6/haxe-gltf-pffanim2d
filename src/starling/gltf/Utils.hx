@@ -115,7 +115,7 @@ class Utils {
 			props = new SSAnimNode.SSBaseProps();
 		}
 		props.visible = spr.visible;
-		props.alpha = spr.alpha;
+		props.alpha_self = spr.alpha;
 		props.x = spr.x;
 		props.y = spr.y;
 		props.pivotX = spr.pivotX;
@@ -127,7 +127,7 @@ class Utils {
 	}
 	static public function undumpSprite(spr:DisplayObject, props:SSAnimNode.SSBaseProps):Void {
 		spr.visible = props.visible;
-		spr.alpha = props.alpha;
+		spr.alpha = props.alpha_self; //*props.alpha_mask;
 		spr.x = props.x;
 		spr.y = props.y;
 		spr.pivotX = props.pivotX;
@@ -135,6 +135,26 @@ class Utils {
 		spr.scaleX = props.scaleX;
 		spr.scaleY = props.scaleY;
 		spr.rotation = props.rotation;
+	}
+
+	static public function undumpAnimSprite(spr:DisplayObject, props:SSAnimNode.SSAnimNode):Void {
+		if(props.a_dirty > 0){
+			spr.visible = props.visible;
+			spr.alpha = props.alpha_self*props.alpha_mask;
+		}
+		if(props.xy_dirty > 0){
+			spr.x = props.x;
+			spr.y = props.y;
+		// spr.pivotX = props.pivotX;
+		// spr.pivotY = props.pivotY;
+		}
+		if(props.sxsy_dirty > 0){
+			spr.scaleX = props.scaleX;
+			spr.scaleY = props.scaleY;
+		}
+		if(props.rotation > 0){
+			spr.rotation = props.rotation;
+		}
 	}
 
 	static public function getHierarchyChain(spr:DisplayObjectContainer):Array<DisplayObjectContainer> {
