@@ -18,28 +18,12 @@ import starling.textures.Texture;
 /**
 
 # CONVENTIONS:
-- gLTF and all resources requered are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
+- gLTF and all required resources are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
 - gLTF can be parsed for external files list in advance - so they can be loaded before scene creation
-- Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
-
+- Conversions: Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
+- GLTFScene expects Starling Texture for image resource by default - but any Texture-derived class should be fine. 
+// Caller may provide Texture taken from some atlas, for example
 - By default all nodes are visible after creation. This can be further altered with Compositions
-
-# Compositions:
-- Named after same feature of Krita
-- Each composition - simple ruleset (on/off) for nodes visibility
-// So it`s possible to create all interfaces in one hierarchy and on/off bunch of layers to "switch" between them
-
-# Blender to Starling essentials:
-- Cameras, Armatures, skinning, morth tarkets, shapekeys - ignored
-- Valid blender objects: Empties for grouping, simple quads (4-vert rectangle) mesh objects
-// Quads imported as display.DisplayObjectContainer and starling.display.Quad by default
-// All other nodes in gLTF are ignored
-- Quads must have unlit textures, they will used as Texture for starling node
-- Quads must be in Blender XY-plane (for top-down view)
-- Animations: Armature animations are not supported directly, must be baked on valid objects to be usable by GLTFScene
-- Animations: Actions must be stashed (Dopesheet-Action Editor) or pushed to NLA track (NLA Editor)
-// Export name will be the name of action in any case
-- Animations: Actions must always have frame 0 keyed (exporter resets any offset)
 
 **/
 
@@ -47,15 +31,20 @@ class GLTFScene {
 	public function new(){};
 
 	public var gltf_struct: GLTF = null;
-	public var gltf_root: DisplayObjectContainer = null;// first node with NO PARENTS
-	public var nodes_list: Array<SSAnimNode> = null;// Plain list of Starling objects (same order as gLTF nodes)
+	// first node with NO PARENTS
+	public var gltf_root: DisplayObjectContainer = null;
+	// Plain list of Starling objects (same order as gLTF nodes)
+	public var nodes_list: Array<PFFAnimNode> = null;
+	// Blender`s custom props from scene root node. Caller may overload some field before loading gltf
+	// can be used to drive custom node creations
+	public var nodes_rootprops: Utils.MapS2A = new Utils.MapS2A();
 
 	public var gltf_load_warnings: Utils.ArrayS = null;
 	// Blindness conversion between gLTF translations/locations and pixels
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
-	public var kMetersXYZ_to_PixelsXY = [0,2];// px_x = loc[0], px_y = loc[2]
-	public var kEulerXYZ_to_PixelsRot = 1;
+	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];// px_x = loc[0], px_y = loc[2]
+	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
@@ -69,6 +58,10 @@ class GLTFScene {
 	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, 
 		gltf_node_generator:(GLTFScene, String, Texture, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Dynamic)->DisplayObjectContainer): DisplayObjectContainer
 	{
+		gltf_struct = null;
+		gltf_root = null;// no unchild if != null, caller may use it further
+		nodes_list = null;
+		// nodes_rootprops - no change, can be used to drive custom node creations
 		gltf_load_warnings = new Array<String>();
 		if(gltf_node_generator == null){
 			gltf_node_generator = defaultStarlingSpriteGenerator;
@@ -79,18 +72,11 @@ class GLTFScene {
 		}
 		function resource_by_uri(index: Int, uri: String): Bytes {
 			if(Utils.safeLen(uri) > 0){
-				// TBD: base64 encoding in uri
-				var dat = gltf_resources[uri];
-				// if (Std.is(data, String))
-				// if (Std.is(data, Bytes)) {
-				// if (Std.is(data, ByteArrayData))
-				var byteArray:ByteArray = cast(dat, ByteArray);
-				if(byteArray != null){
+				var resource:Bytes = extractResourceWithExpectedType(this, uri, gltf_resources, 'uri_bin');
+				if(resource != null){
 					log("buffer used: idx="+index+", uri="+uri);
-					return Utils.openflByteArray2haxeBytes(byteArray);
+					return resource;
 				}
-				log_e("warning: buffer getter: unexpected type: " + Type.typeof(dat));
-				// return Bytes.ofData(dat);
 			}
 			log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
 			return Bytes.alloc(0);
@@ -104,17 +90,12 @@ class GLTFScene {
 			return null;
 		}
 		try {
-			var json_raw = gltf_resources[gltf_resource_name];
-			if(Std.isOfType(json_raw,String)){
-				gltf_struct = GLTF.parseAndLoadWithBuffer(json_raw, resource_by_uri);
-			}else if(Type.typeof(json_raw) == Type.ValueType.TObject ){
-				// Can be object parsed by Starling, converting to JSON string...
-				var json_str = haxe.Json.stringify(json_raw);
-				gltf_struct = GLTF.parseAndLoadWithBuffer(json_str, resource_by_uri);
-			}else{
-				// TBD: ByteArray? parseAndLoadGLB for glb files
-				log_e("warning: glb not supported yet");
+			var json_str:String = extractResourceWithExpectedType(this, gltf_resource_name, gltf_resources, 'gltf_json');
+			if(Utils.safeLen(json_str) == 0){
+				log_e("error: gltf json not found");
+				return null;
 			}
+			gltf_struct = GLTF.parseAndLoadWithBuffer(json_str, resource_by_uri);
 		}catch (e : Any) {
 			trace("GLTF parsing exception", e);
 			log_e("error: GLTF parsing exception");
@@ -123,6 +104,13 @@ class GLTFScene {
 			log_e("error: GLTF == null");
 			return null;
 		}
+		// detecting kMetersXYZ_freeAxis
+		var xyz_avail = [0,1,2].filter( (val) -> { return kMetersXYZ_to_PixelsXY.indexOf(val) < 0; } );
+		if(xyz_avail.length != 1){
+			log_e("error: invalid kMetersXYZ_to_PixelsXY");
+			return null;
+		}
+		kMetersXYZ_freeAxis = xyz_avail[0];
 		// First pass - Creating all nodes separately
 		nodes_list = [];
 		for(nd in gltf_struct.nodes){
@@ -143,10 +131,9 @@ class GLTFScene {
 							var tex_id = pbr.baseColorTexture.index;
 							var tex = gltf_struct.textures[tex_id];
 							if(tex != null && tex.image != null){
-								var dat = gltf_resources[tex.image.uri];
-								if(dat != null){
-									texture = cast(dat, Texture);
-								}else{
+								var dat = extractResourceWithExpectedType(this, tex.image.uri, gltf_resources, 'uri_tex');
+								texture = cast(dat, Texture);
+								if(texture == null){
 									log_e("warning: texture not found, node: "+nd.name+", uri: "+tex.image.uri);
 								}
 							}
@@ -172,7 +159,7 @@ class GLTFScene {
 			if(node_sprite == null){
 				node_sprite = new starling.display.Sprite();
 			}
-			var starling_node = new SSAnimNode();
+			var starling_node = new PFFAnimNode();
 			node_sprite.name = nd.name;
 			starling_node.gltf_id = nd.id;
 			starling_node.sprite = node_sprite;
@@ -208,6 +195,18 @@ class GLTFScene {
 				// var gltf_node = gltf_struct.nodes[i];
 				// trace("- found root", gltf_node.id, gltf_node.name);
 				gltf_root = node_sprite;
+				if(starling_node.customprops != null){
+					// Adding props to nodes_rootprops
+					var dynobj:haxe.DynamicAccess<Dynamic> = starling_node.customprops;
+					for (key in dynobj.keys()){
+						if(nodes_rootprops[key] != null){
+							// already filled, no overwrite
+							continue;
+						}
+						var val = dynobj.get(key);
+						nodes_rootprops[key] = val;
+					}
+				}
 			}
 			var hierarchy = Utils.getHierarchyChain(node_sprite);
 			var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
@@ -221,25 +220,58 @@ class GLTFScene {
 		return gltf_root;
 	}
 
-	public static function defaultStarlingSpriteProps(scene:GLTFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):SSAnimNode.SSBaseProps {
-		var pos_x = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
-		var pos_y = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
-		var scale_x = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
-		var scale_y = trs_scale[scene.kMetersXYZ_to_PixelsXY[1]];
-		var rotation = trs_rotation_eulerXYZ[scene.kEulerXYZ_to_PixelsRot];
-		var bbox_min_x = 0;
-		var bbox_min_y = 0;
-		var bbox_max_x = 0;
-		var bbox_max_y = 0;
+	public static function extractResourceWithExpectedType(scene:GLTFScene, gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, load_mode:String):Dynamic {
+		if(load_mode == 'gltf_json'){
+			var json_raw = gltf_resources[gltf_resource_name];
+			var json_str:String = "";
+			if(Std.isOfType(json_raw,String)){
+				json_str = json_raw;
+			}else if(Type.typeof(json_raw) == Type.ValueType.TObject ){
+				// Can be object parsed by Starling, converting to JSON string...
+				json_str = haxe.Json.stringify(json_raw);
+			}else{
+				// ByteArray? GLB?
+				log("extractResourceWithExpectedType: glb not supported yet");
+				return null;
+			}
+			return json_str;
+		}
+		if(load_mode == 'uri_bin'){
+			var dat = gltf_resources[gltf_resource_name];
+			// if (Std.is(data, String)) - TBD: base64 encoding in uri
+			// if (Std.is(data, Bytes)) {
+			// if (Std.is(data, ByteArrayData))
+			var byteArray:ByteArray = cast(dat, ByteArray);
+			if(byteArray != null){
+				return Utils.openflByteArray2haxeBytes(byteArray);
+			}
+		}
+		if(load_mode == 'uri_tex'){
+			var dat = gltf_resources[gltf_resource_name];
+			return dat;
+		}
+		return null;
+	}
+
+	public static function defaultStarlingSpriteProps(scene:GLTFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
+		var pos_x:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
+		var pos_y:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
+		var scale_x:Float = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
+		var scale_y:Float = trs_scale[scene.kMetersXYZ_to_PixelsXY[1]];
+		var rotation:Float = trs_rotation_eulerXYZ[scene.kMetersXYZ_freeAxis];
+		var bbox_min_x:Float = 0;
+		var bbox_min_y:Float = 0;
+		var bbox_max_x:Float = 0;
+		var bbox_max_y:Float = 0;
 		if(bbox_px != null){
 			bbox_min_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0]];
 			bbox_min_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1]];
 			bbox_max_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0] + 3];
 			bbox_max_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1] + 3];
 		}
-		var spr_props:SSAnimNode.SSBaseProps = new SSAnimNode.SSBaseProps();
+		var spr_props:PFFAnimNode.PFFNodeProps = new PFFAnimNode.PFFNodeProps();
 		spr_props.visible = true;
-		spr_props.alpha = 1.0;
+		spr_props.alpha_self = 1.0;
 		spr_props.x = pos_x;
 		spr_props.y = pos_y;
 		spr_props.scaleX = scale_x;
@@ -253,7 +285,7 @@ class GLTFScene {
 	}
 
 	public static function defaultStarlingSpriteGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
-		var spr_props:SSAnimNode.SSBaseProps = defaultStarlingSpriteProps(scene, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+		var spr_props:PFFAnimNode.PFFNodeProps = defaultStarlingSpriteProps(scene, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(node_texture != null){
 			// Quad
@@ -281,17 +313,10 @@ class GLTFScene {
 			log("extractExternalResources: invalid input");
 			return null;
 		}
-		var json_raw = gltf_resources[gltf_resource_name];
-		var json_str:String = "";
-		if(Std.isOfType(json_raw,String)){
-			json_str = json_raw;
-		}else if(Type.typeof(json_raw) == Type.ValueType.TObject ){
-			// Can be object parsed by Starling, converting to JSON string...
-			json_str = haxe.Json.stringify(json_raw);
-		}else{
-			// ByteArray
-			// TBD: parseAndLoadGLB for glb files
-			log("extractExternalResources: glb not supported yet");
+
+		var json_str:String = extractResourceWithExpectedType(null, gltf_resource_name, gltf_resources, 'gltf_json');
+		if(Utils.safeLen(json_str) == 0){
+			log("extractExternalResources: gltf json: not found");
 			return null;
 		}
 		var externals_map:Utils.ArrayS = [];

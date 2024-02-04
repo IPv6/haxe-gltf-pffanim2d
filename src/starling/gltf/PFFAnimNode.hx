@@ -1,7 +1,7 @@
 package starling.gltf;
 import starling.display.DisplayObjectContainer;
 
-class SSBaseProps {
+class PFFNodeProps {
 	public function new(){};
 	public var x:Float = 0;
 	public var y:Float = 0;
@@ -16,11 +16,11 @@ class SSBaseProps {
 	public var alpha_mask:Float = 1;
 	public var visible:Bool = true;
 	public function toString():String {
-		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha}/${visible}]';
+		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha_self*alpha_mask}/${visible}]';
 	}
 }
 
-class SSAnimNode extends SSBaseProps {
+class PFFAnimNode extends PFFNodeProps {
 	public function new(){super();};
 	public var sprite:DisplayObjectContainer = null;
 	public var gltf_id:Int = -1;
