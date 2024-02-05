@@ -3,6 +3,7 @@ package pff.starling;
 import sys.net.UdpSocket;
 import gltf.*;
 import haxe.io.Bytes;
+import haxe.crypto.Base64;
 import openfl.utils.ByteArray;
 import starling.core.Starling;
 import starling.events.*;
@@ -32,12 +33,13 @@ class PFFScene {
 	public var gltf_struct: GLTF = null;
 	// first node with NO PARENTS
 	public var gltf_root: DisplayObjectContainer = null;
-	// Plain list of Starling objects (same order as gLTF nodes)
+	// Plain list of Starling objects (sorted according Z-order of locations - may differ from gLTF nodes order)
 	public var nodes_list: Array<PFFAnimNode> = null;
 	// Blender`s custom props from scene root node. Caller may overload some field before loading gltf
 	// can be used to drive custom node creations
 	public var nodes_rootprops: Utils.MapS2A = new Utils.MapS2A();
 
+	public var gltf_load_verbose: Bool = false;
 	public var gltf_load_warnings: Utils.ArrayS = null;
 	// Blindness conversion between gLTF translations/locations and pixels
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
@@ -61,23 +63,19 @@ class PFFScene {
 		gltf_root = null;// no unchild if != null, caller may use it further
 		nodes_list = null;
 		// nodes_rootprops - no change, can be used to drive custom node creations
-		gltf_load_warnings = new Array<String>();
+		gltf_load_warnings = null;
 		if(gltf_node_generator == null){
 			gltf_node_generator = defaultStarlingSpriteGenerator;
-		}
-		function log_e(message:String) {
-			gltf_load_warnings.push(message);
-			log(message);
 		}
 		function resource_by_uri(index: Int, uri: String): Bytes {
 			if(Utils.safeLen(uri) > 0){
 				var resource:Bytes = extractResourceWithExpectedType(this, uri, gltf_resources, 'uri_bin');
 				if(resource != null){
-					log("buffer used: idx="+index+", uri="+uri);
+					log_i('buffer used: idx=${index}, uri=${Utils.strLimit(uri,150)}');
 					return resource;
 				}
 			}
-			log_e("error: gltf_resources[<buffer>] == null, Buffer: idx="+index+", uri="+uri);
+			log_e('error: gltf_resources[<buffer>] == null, Buffer: idx=${index}, uri=${Utils.strLimit(uri,150)}');
 			return Bytes.alloc(0);
 		};
 		if(Utils.safeLen(gltf_resource_name) == 0 || Utils.safeLen(gltf_resources) == 0){
@@ -96,7 +94,7 @@ class PFFScene {
 			}
 			gltf_struct = GLTF.parseAndLoadWithBuffer(json_str, resource_by_uri);
 		}catch (e : Any) {
-			trace("GLTF parsing exception", e);
+			log_i('GLTF parsing exception: ${e}');
 			log_e("error: GLTF parsing exception");
 		}
 		if(gltf_struct == null){
@@ -133,12 +131,12 @@ class PFFScene {
 								var dat = extractResourceWithExpectedType(this, tex.image.uri, gltf_resources, 'uri_tex');
 								texture = cast(dat, Texture);
 								if(texture == null){
-									log_e("warning: texture not found, node: "+nd.name+", uri: "+tex.image.uri);
+									log_e('warning: texture not found, node: ${nd.name}, uri: ${Utils.strLimit(tex.image.uri,150)}');
 								}
 							}
 						}
 					}else{
-						log_e("warning: mat not found, node: "+nd.name);
+						log_e('warning: mat not found, node: ${nd.name}');
 					}
 				}
 				if(prim.attributes != null){
@@ -153,37 +151,46 @@ class PFFScene {
 				}
 			}
 			var customprops = nd.extras;
-			// trace("- creating node", nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
+			log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
 			var node_sprite:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
 			if(node_sprite == null){
 				node_sprite = new starling.display.Sprite();
 			}
 			var starling_node = new PFFAnimNode();
+			Utils.dumpSprite(node_sprite, starling_node);
 			node_sprite.name = nd.name;
 			starling_node.gltf_id = nd.id;
 			starling_node.sprite = node_sprite;
 			starling_node.customprops = customprops;
-			Utils.dumpSprite(node_sprite, starling_node);
+			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis];
 			nodes_list.push(starling_node);
 		}
+		// Sorting according to node location Z-compinent
+		// Critical for rendering order on the same hierarchy level
+		nodes_list.sort( (nd1, nd2) -> {return Utils.intSign(nd2.z_order - nd1.z_order);} );
 
 		// Second pass - Setup hierarchy && detecti gltf_root
 		// - gltf_root = first node with NO PARENTS
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
 			var node_sprite = starling_node.sprite;
-			var gltf_node = gltf_struct.nodes[i];
+			var gltf_node = gltf_struct.nodes[starling_node.gltf_id];
 			if(gltf_node.children!=null && gltf_node.children.length > 0){
 				for ( j in 0...(gltf_node.children.length) ){
 					var child_id = gltf_node.children[j].id;
-					var child_starling_node = nodes_list[child_id];
-					var child_node_sprite = child_starling_node.sprite;
-					if(child_node_sprite.parent != null){
-						log_e("warning: node parent not empty: "+child_node_sprite.name);
+					var child_starling_nodes = nodes_list.filter((nd) -> {return nd.gltf_id == child_id;} );
+					if(child_starling_nodes.length == 1){
+						var child_starling_node = child_starling_nodes[0]; // nodes_list[child_id];
+						var child_node_sprite = child_starling_node.sprite;
+						if(child_node_sprite.parent != null){
+							log_e('warning: node parent not empty: ${child_node_sprite.name}');
+						}
+						child_starling_node.gltf_parent_id = starling_node.gltf_id;
+						node_sprite.addChild(child_node_sprite);
+						// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
+					}else{
+						log_e('warning: node child not found: ${gltf_node.name}: ${child_id}');
 					}
-					child_starling_node.gltf_parent_id = starling_node.gltf_id;
-					node_sprite.addChild(child_node_sprite);
-					// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
 				}
 			}
 		}
@@ -192,7 +199,7 @@ class PFFScene {
 			var node_sprite = starling_node.sprite;
 			if(gltf_root == null && node_sprite.parent == null){
 				// var gltf_node = gltf_struct.nodes[i];
-				// trace("- found root", gltf_node.id, gltf_node.name);
+				// log_i("- found root", gltf_node.id, gltf_node.name);
 				gltf_root = node_sprite;
 				if(starling_node.customprops != null){
 					// Adding props to nodes_rootprops
@@ -210,8 +217,11 @@ class PFFScene {
 			var hierarchy = Utils.getHierarchyChain(node_sprite);
 			var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
 			starling_node.full_path = hierarchy_names.join("/");
-			// var spr_props = Utils.dumpSprite(starling_node, null);
-			// trace("Sprite dump", starling_node.sprite.name, starling_node.full_path, starling_node.toString());
+			if(starling_node.full_path == 'demo/bg'){
+				starling_node.sprite.visible = false;
+			}
+			// var spr_props = Utils.dumpSprite(starling_node.sprite, null);
+			log_i('sprite dump: ${starling_node.full_path}, ${starling_node.z_order} ${starling_node.toString()}');
 		}
 		if(gltf_root == null){
 			log_e("warning: scene root not found");
@@ -237,7 +247,14 @@ class PFFScene {
 		}
 		if(load_mode == 'uri_bin'){
 			var dat = gltf_resources[gltf_resource_name];
-			// if (Std.is(data, String)) - TBD: base64 encoding in uri
+			if (dat == null && Std.isOfType(gltf_resource_name, String)){
+				// base64 encoding in uri
+				var val:String = cast(gltf_resource_name, String);
+				if(StringTools.startsWith(val,"data:") && val.indexOf("base64,") > 0){
+					var val_split = val.split("base64,");
+					return Base64.decode(val_split[1]);
+				}
+			}
 			// if (Std.is(data, Bytes)) {
 			// if (Std.is(data, ByteArrayData))
 			var byteArray:ByteArray = cast(dat, ByteArray);
@@ -278,8 +295,8 @@ class PFFScene {
 		spr_props.rotation = rotation;
 		spr_props.bbox_w = bbox_max_x-bbox_min_x;
 		spr_props.bbox_h = bbox_max_y-bbox_min_y;
-		spr_props.pivotX = spr_props.bbox_w*0.5 - (bbox_min_x+bbox_max_x) * 0.5;
-		spr_props.pivotY = spr_props.bbox_h*0.5 - (bbox_min_y+bbox_max_y) * 0.5;
+		spr_props.pivotX = spr_props.bbox_w*0.5 + (bbox_min_x+bbox_max_x) * 0.5;
+		spr_props.pivotY = spr_props.bbox_h*0.5 + (bbox_min_y+bbox_max_y) * 0.5;
 		return spr_props;
 	}
 
@@ -327,6 +344,10 @@ class PFFScene {
 					var val = dynobj.get(key);
 					// trace("- ", key, val, Type.typeof(val));
 					if(key == "uri" && Std.isOfType(val, String)){
+						if(StringTools.startsWith(val,"data:")){
+							// base64, not needed
+							continue;
+						}
 						if(externals_map.indexOf(val) < 0){
 							externals_map.push(val);
 						}
@@ -372,6 +393,19 @@ class PFFScene {
 		return true;
 	}
 
+	public function log_i(message:String) {
+		if(!gltf_load_verbose){
+			return;
+		}
+		log(message);
+	}
+	public function log_e(message:String) {
+		if(gltf_load_warnings == null){
+			gltf_load_warnings = new Array<String>();
+		}
+		gltf_load_warnings.push(message);
+		log(message);
+	}
 	private static function log(str:String) {
 		trace("PFFScene: ", str);
 	}

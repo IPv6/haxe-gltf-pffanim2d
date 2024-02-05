@@ -127,7 +127,7 @@ class Utils {
 	}
 	static public function undumpSprite(spr:DisplayObject, props:PFFAnimNode.PFFNodeProps):Void {
 		spr.visible = props.visible;
-		spr.alpha = props.alpha_self; //*props.alpha_mask;
+		spr.alpha = props.alpha_self;
 		spr.x = props.x;
 		spr.y = props.y;
 		spr.pivotX = props.pivotX;
@@ -169,5 +169,28 @@ class Utils {
 			pp = pp.parent;
 		}
 		return result;
+	}
+
+	public static function strLimit(limitedStr : String, len : Int = 100, fromLeft : Bool = true, trimMark : String = "...") : String {
+		if (limitedStr == null) {
+			return "";
+		}
+		if (limitedStr.length > len) {
+			if (fromLeft) {
+				limitedStr = limitedStr.substring(0, len) + trimMark;
+			}else{
+				limitedStr = trimMark + limitedStr.substring(limitedStr.length - len);
+			}
+		}
+		return limitedStr;
+	}
+
+	public static function intSign(n : Float) : Int{
+		if (n == 0.0){
+			return 0;
+		}else if (n < 0){
+			return -1;
+		}
+		return 1;
 	}
 }

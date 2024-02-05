@@ -13,10 +13,9 @@ class PFFNodeProps {
 	public var bbox_w:Float = 0;
 	public var bbox_h:Float = 0;
 	public var alpha_self:Float = 1;
-	public var alpha_mask:Float = 1;
 	public var visible:Bool = true;
 	public function toString():String {
-		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha_self*alpha_mask}/${visible}]';
+		return '[p(${x},${y})-(${pivotX},${pivotY}) s(${scaleX},${scaleY}) r${rotation} a${alpha_self}/${visible}]';
 	}
 }
 
@@ -28,6 +27,8 @@ class PFFAnimNode extends PFFNodeProps {
 	public var full_path:String = "";
 	public var customprops:Dynamic = null;
 
+	public var z_order:Float = 0;
+	public var alpha_mask:Float = 1;
 	public var xy_dirty:Int = 0;
 	public var sxsy_dirty:Int = 0;
 	public var r_dirty:Int = 0;

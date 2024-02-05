@@ -1,15 +1,12 @@
 # Simple 2d Animation Library
 - Intended workflow: Blender -> gLTF -> OpenFL/Starling game
 - Supported: Objects (empty/quad) TRS animations
-- Not supported: bone/armature/skeletal animations, shapekeys animations
 - Somewhat supported: Alpha animation, Clipping rect animation (sprite masking)
 
 # Blender setup details
 
-- Cameras, Armatures, skinning, morth tarkets, shapekeys - ignored
-- Recognizable objects: Empties for grouping and simple planes (4-vert rectangle, quad) mesh objects
-- Quads must be arranged in Blender XY-plane (for top-down view)
-- All other nodes in gLTF are ignored
+- Recognizable objects: Empties for grouping and simple planes (4-vert rectangle, quad) mesh objects for starling sprites
+- Empties && Quads must be arranged in Blender XY-plane (for top-down view). All other nodes in gLTF are ignored
 - Quads must have unlit textures - they will used as Texture for corresponding starling node (by default)
 - Plane(Quad) can have origin offset - offset converted to Sprite pivot (by default)
 - Plane/Empty can have custom props - they are loaded and can be used for customizing starling node creation
@@ -35,11 +32,12 @@ Each Empty (in Blender) can contain Plane (quad) Mesh object with the name "#pff
 So it`s possible, for example, to create several interfaces in one hierarchy - and on/off bunch of layers to "switch" between them
 - Named after same feature of Krita
 
-# Plans
+# Limitations && Plans
 
-- base64 in URIs (buffers, images)
-- GLB parsing support && embedded PNGs/JPGs/BINs
-- Auto-packing into atlas on request?
+- Not supported, but planned: GLB format
+- Base64 in image URIs (ok in buffers though)
+- Not supported: bone/armature, shapekeys, skinning, morth targets
+- Auto-packing into atlas on request? Atlas Textures can be already utilized during scene creation
 
 # Run demo
 
@@ -49,6 +47,8 @@ haxelib install starling
 cd ./demo
 openfl test <win/mac/...>
 ```
+
+- Demo using resources from https://opengameart.org/content/free-game-gui
 
 # Run tests
 

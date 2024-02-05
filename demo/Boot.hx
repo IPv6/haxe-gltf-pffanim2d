@@ -76,17 +76,16 @@ class Boot extends openfl.display.Sprite
 	private function loadAssets() {
 		// var proj_path = Sys.getCwd();proj_path = StringTools.replace(...); Path.normalize(Sys.getCwd()+"../test_scene/bg.jpg")
 		// var appDir:File = File.applicationDirectory;appDir.resolvePath("test_scene/root.gltf")
-		trace("- Loading assets", Assets.getPath("test_scene/root.gltf"));
+		var all_files = Assets.list(null);
+		trace("- Loading assets", all_files);
 		_assets = new AssetManager();
 		_assets.verbose = true;
 		// Enquening one-by-one top supply asset with proper name with extension
-		_assets.enqueueSingle(Assets.getPath ("test_scene/root.bin"),"root.bin");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/root.gltf"),"root.gltf");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/bg.jpg"),"bg.jpg");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/logo_bg_title.png"),"logo_bg_title.png");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/buttons_bt_read.png"),"buttons_bt_read.png");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/buttons_bt_options.png"),"buttons_bt_options.png");
-		_assets.enqueueSingle(Assets.getPath ("test_scene/buttons_bt_exit.png"),"buttons_bt_exit.png");
+		for(pth in all_files){
+			var pth_full = Assets.getPath(pth);
+			// Path.directory(pth_full)
+			_assets.enqueueSingle(pth_full, Path.withoutDirectory(pth_full));
+		}
 		_assets.loadQueue(function(){
 			_root = cast(_starling.root, starling.display.Sprite);
 			trace("loadQueue finished");
@@ -125,9 +124,14 @@ class Boot extends openfl.display.Sprite
 			}
 		}
 		var gscene = new PFFScene();
+		gscene.gltf_load_verbose = true;
 		// Custom loading options setup: gscene.<props> = ...
 		var gltf_root = gscene.createSceneTree("root", gltf_res, null);
-		trace("- loading warnings/errors", gscene.gltf_load_warnings);
+		if(Utils.safeLen(gscene.gltf_load_warnings) > 0){
+			trace("- loaded with warnings/errors", Utils.safeLen(gscene.gltf_load_warnings) );
+		}else{
+			trace("- loaded without warnings/errors");
+		}
 		if(gltf_root != null){
 			gltf_root.x = _starling.stage.stageWidth * 0.5;
 			gltf_root.y = _starling.stage.stageHeight * 0.5;
