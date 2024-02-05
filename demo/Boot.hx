@@ -4,18 +4,17 @@ import openfl.system.Capabilities;
 import openfl.system.System;
 import openfl.errors.Error;
 import openfl.geom.Rectangle;
+import openfl.display3D.Context3DRenderMode;
 import haxe.io.*;
 
 import gltf.*;
-import starling.gltf.*;
+import pff.starling.*;
+import openfl.utils.Assets;
 
-import openfl.display3D.Context3DRenderMode;
-import starling.gltf.*;
 import starling.core.*;
 import starling.display.*;
 import starling.events.*;
 import starling.assets.*;
-import openfl.utils.Assets;
 import starling.utils.RectangleUtil;
 import starling.utils.StringUtil;
 import starling.utils.Max;
@@ -111,7 +110,7 @@ class Boot extends openfl.display.Sprite
 		// var asset_raw:String = asset_ba.readUTFBytes(asset_ba.length);
 		var gltf_res:Utils.MapS2A = new Utils.MapS2A();
 		gltf_res["root"] = asset_obj;
-		var ext_list = GLTFScene.extractExternalResources( "root", gltf_res );
+		var ext_list = PFFScene.extractExternalResources( "root", gltf_res );
 		trace("- resources required by gLTF", ext_list);
 		for(res_path in ext_list){
 			var asset_tex = _assets.getTexture(res_path);
@@ -125,7 +124,7 @@ class Boot extends openfl.display.Sprite
 				continue;
 			}
 		}
-		var gscene = new GLTFScene();
+		var gscene = new PFFScene();
 		// Custom loading options setup: gscene.<props> = ...
 		var gltf_root = gscene.createSceneTree("root", gltf_res, null);
 		trace("- loading warnings/errors", gscene.gltf_load_warnings);

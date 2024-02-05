@@ -1,4 +1,4 @@
-package starling.gltf;
+package pff.starling;
 
 import haxe.io.Bytes;
 import haxe.ds.Vector;

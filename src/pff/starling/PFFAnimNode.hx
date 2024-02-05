@@ -1,4 +1,4 @@
-package starling.gltf;
+package pff.starling;
 import starling.display.DisplayObjectContainer;
 
 class PFFNodeProps {

@@ -1,5 +1,4 @@
-package starling.gltf;
-
+package pff.starling;
 
 import sys.net.UdpSocket;
 import gltf.*;
@@ -21,13 +20,13 @@ import starling.textures.Texture;
 - gLTF and all required resources are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
 - gLTF can be parsed for external files list in advance - so they can be loaded before scene creation
 - Conversions: Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
-- GLTFScene expects Starling Texture for image resource by default - but any Texture-derived class should be fine. 
+- PFFScene expects Starling Texture for image resource by default - but any Texture-derived class should be fine. 
 // Caller may provide Texture taken from some atlas, for example
 - By default all nodes are visible after creation. This can be further altered with Compositions
 
 **/
 
-class GLTFScene {
+class PFFScene {
 	public function new(){};
 
 	public var gltf_struct: GLTF = null;
@@ -56,7 +55,7 @@ class GLTFScene {
 	* In case of scene creation problems process will continue with best-effort fallbacks, is possible
 	**/
 	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, 
-		gltf_node_generator:(GLTFScene, String, Texture, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Dynamic)->DisplayObjectContainer): DisplayObjectContainer
+		gltf_node_generator:(PFFScene, String, Texture, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Dynamic)->DisplayObjectContainer): DisplayObjectContainer
 	{
 		gltf_struct = null;
 		gltf_root = null;// no unchild if != null, caller may use it further
@@ -220,7 +219,7 @@ class GLTFScene {
 		return gltf_root;
 	}
 
-	public static function extractResourceWithExpectedType(scene:GLTFScene, gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, load_mode:String):Dynamic {
+	public static function extractResourceWithExpectedType(scene:PFFScene, gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, load_mode:String):Dynamic {
 		if(load_mode == 'gltf_json'){
 			var json_raw = gltf_resources[gltf_resource_name];
 			var json_str:String = "";
@@ -253,7 +252,7 @@ class GLTFScene {
 		return null;
 	}
 
-	public static function defaultStarlingSpriteProps(scene:GLTFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
+	public static function defaultStarlingSpriteProps(scene:PFFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
 		var pos_x:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
 		var pos_y:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
 		var scale_x:Float = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
@@ -284,7 +283,7 @@ class GLTFScene {
 		return spr_props;
 	}
 
-	public static function defaultStarlingSpriteGenerator(scene:GLTFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
+	public static function defaultStarlingSpriteGenerator(scene:PFFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
 		var spr_props:PFFAnimNode.PFFNodeProps = defaultStarlingSpriteProps(scene, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(node_texture != null){
@@ -374,6 +373,6 @@ class GLTFScene {
 	}
 
 	private static function log(str:String) {
-		trace("GLTFScene: ", str);
+		trace("PFFScene: ", str);
 	}
 }
