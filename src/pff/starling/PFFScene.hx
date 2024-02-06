@@ -274,7 +274,7 @@ class PFFScene {
 		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]];
 		var scale_x:Float = trs_scale[kMetersXYZ_to_PixelsXY[0]];
 		var scale_y:Float = trs_scale[kMetersXYZ_to_PixelsXY[1]];
-		var rotation:Float = trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
+		var rotation:Float = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 		var bbox_min_x:Float = 0;
 		var bbox_min_y:Float = 0;
 		var bbox_max_x:Float = 0;

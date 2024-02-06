@@ -16,7 +16,8 @@
   - Export name will be the name of action in both cases
 - Animations: Actions must always have frame 0 keyed
   - Since exporter resets any timeline offset anyway
-- Blender export options: TODO
+- Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
+
 
 # Alpha && Clipping animation conventions
 
