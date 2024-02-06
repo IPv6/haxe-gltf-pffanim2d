@@ -51,27 +51,22 @@ class PFFScene {
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
 	* @param gltf_resource_name: glft-file key in gltf_resources
 	* @param gltf_resources: all resources required for glft loading. key: <file name>, value: starling.AssetManager.getAsset(<asset for key>)
-	* @param gltf_node_generator: custom node generators-functions. For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	* @return root DisplayObject if no errors or null.
 	* In case of errors/warnings gltf_load_warnings will be filled with explanations
 	* In case of scene creation problems process will continue with best-effort fallbacks, is possible
 	**/
-	public function createSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>, 
-		gltf_node_generator:(PFFScene, String, Texture, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Utils.ArrayF, Dynamic)->DisplayObjectContainer): DisplayObjectContainer
+	public function makeSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>): DisplayObjectContainer
 	{
 		gltf_struct = null;
 		gltf_root = null;// no unchild if != null, caller may use it further
 		nodes_list = null;
 		// nodes_rootprops - no change, can be used to drive custom node creations
 		gltf_load_warnings = null;
-		if(gltf_node_generator == null){
-			gltf_node_generator = defaultStarlingSpriteGenerator;
-		}
 		function resource_by_uri(index: Int, uri: String): Bytes {
 			if(Utils.safeLen(uri) > 0){
 				var resource:Bytes = extractResourceWithExpectedType(this, uri, gltf_resources, 'uri_bin');
 				if(resource != null){
-					log_i('buffer used: idx=${index}, uri=${Utils.strLimit(uri,150)}');
+					// log_i('buffer used: idx=${index}, uri=${Utils.strLimit(uri,150)}');
 					return resource;
 				}
 			}
@@ -151,11 +146,12 @@ class PFFScene {
 				}
 			}
 			var customprops = nd.extras;
-			log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
-			var node_sprite:DisplayObjectContainer = gltf_node_generator(this, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
+			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
+			var node_sprite:DisplayObjectContainer = makeStarlingSprite(nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
 			if(node_sprite == null){
 				node_sprite = new starling.display.Sprite();
 			}
+			// makeStarlingSprite can be overloaded - undumping initial sprite values from sprite itself
 			var starling_node = new PFFAnimNode();
 			Utils.dumpSprite(node_sprite, starling_node);
 			node_sprite.name = nd.name;
@@ -225,7 +221,7 @@ class PFFScene {
 			starling_node.full_path = hierarchy_names.join("/");
 			// if(starling_node.full_path == 'demo/bg'){starling_node.sprite.visible = false;}
 			// var spr_props = Utils.dumpSprite(starling_node.sprite, null);
-			// log_i('sprite dump: ${starling_node.full_path}, ${starling_node.z_order} ${starling_node.toString()}');
+			log_i('Sprite: ${starling_node.full_path}, ${starling_node.toString()}');
 		}
 		if(gltf_root == null){
 			log_e("warning: scene root not found");
@@ -273,21 +269,21 @@ class PFFScene {
 		return null;
 	}
 
-	public static function defaultStarlingSpriteProps(scene:PFFScene, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
-		var pos_x:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[0]];
-		var pos_y:Float = trs_location_px[scene.kMetersXYZ_to_PixelsXY[1]];
-		var scale_x:Float = trs_scale[scene.kMetersXYZ_to_PixelsXY[0]];
-		var scale_y:Float = trs_scale[scene.kMetersXYZ_to_PixelsXY[1]];
-		var rotation:Float = trs_rotation_eulerXYZ[scene.kMetersXYZ_freeAxis];
+	public function prepareStarlingSpriteProps(trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
+		var pos_x:Float = trs_location_px[kMetersXYZ_to_PixelsXY[0]];
+		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]];
+		var scale_x:Float = trs_scale[kMetersXYZ_to_PixelsXY[0]];
+		var scale_y:Float = trs_scale[kMetersXYZ_to_PixelsXY[1]];
+		var rotation:Float = trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 		var bbox_min_x:Float = 0;
 		var bbox_min_y:Float = 0;
 		var bbox_max_x:Float = 0;
 		var bbox_max_y:Float = 0;
 		if(bbox_px != null){
-			bbox_min_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0]];
-			bbox_min_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1]];
-			bbox_max_x = bbox_px[scene.kMetersXYZ_to_PixelsXY[0] + 3];
-			bbox_max_y = bbox_px[scene.kMetersXYZ_to_PixelsXY[1] + 3];
+			bbox_min_x = bbox_px[kMetersXYZ_to_PixelsXY[0]];
+			bbox_min_y = bbox_px[kMetersXYZ_to_PixelsXY[1]];
+			bbox_max_x = bbox_px[kMetersXYZ_to_PixelsXY[0] + 3];
+			bbox_max_y = bbox_px[kMetersXYZ_to_PixelsXY[1] + 3];
 		}
 		var spr_props:PFFAnimNode.PFFNodeProps = new PFFAnimNode.PFFNodeProps();
 		spr_props.visible = true;
@@ -304,8 +300,12 @@ class PFFScene {
 		return spr_props;
 	}
 
-	public static function defaultStarlingSpriteGenerator(scene:PFFScene, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
-		var spr_props:PFFAnimNode.PFFNodeProps = defaultStarlingSpriteProps(scene, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+	/**
+	* Starling node generator. Can be overloaded to customazi starling sprite creation process
+	* For example it is useful to place actual button in place of some default starling Quad/Sprite node
+	**/
+	public function makeStarlingSprite(node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
+		var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(node_texture != null){
 			// Quad

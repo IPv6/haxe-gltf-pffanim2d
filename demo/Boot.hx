@@ -126,7 +126,7 @@ class Boot extends openfl.display.Sprite
 		var gscene = new PFFScene();
 		gscene.gltf_load_verbose = true;
 		// Custom loading options setup: gscene.<props> = ...
-		var gltf_root = gscene.createSceneTree("root", gltf_res, null);
+		var gltf_root = gscene.makeSceneTree("root", gltf_res);
 		if(Utils.safeLen(gscene.gltf_load_warnings) > 0){
 			trace("- loaded with warnings/errors", Utils.safeLen(gscene.gltf_load_warnings) );
 		}else{
