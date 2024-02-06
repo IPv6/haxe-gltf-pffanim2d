@@ -132,10 +132,25 @@ class Boot extends openfl.display.Sprite
 		}else{
 			trace("- loaded without warnings/errors");
 		}
-		if(gltf_root != null){
-			gltf_root.x = _starling.stage.stageWidth * 0.5;
-			gltf_root.y = _starling.stage.stageHeight * 0.5;
-			_root.addChild(gltf_root);
+		if(gltf_root == null){
+			trace("- no root");
+			return;
 		}
+		gltf_root.x = _starling.stage.stageWidth * 0.5;
+		gltf_root.y = _starling.stage.stageHeight * 0.5;
+		_root.addChild(gltf_root);
+
+		var activeUI = 1;
+		gscene.addComposition("ui1",["ui1"],["ui2"]);
+		gscene.addComposition("ui2",["ui2"],["ui1"]);
+		gscene.activateComposition("ui1");
+		Starling.current.juggler.repeatCall(()-> {
+			activeUI = activeUI+1;
+			if( (activeUI%2) == 1){
+				gscene.activateComposition("ui1");
+			}else{
+				gscene.activateComposition("ui2");
+			}
+		}, 3.0);
 	}
 }

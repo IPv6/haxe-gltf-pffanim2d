@@ -16,15 +16,13 @@ import starling.display.DisplayObjectContainer;
 import starling.textures.Texture;
 
 /**
-
-# CONVENTIONS:
-- gLTF and all required resources are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
-- gLTF can be parsed for external files list in advance - so they can be loaded before scene creation
-- Conversions: Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
-- PFFScene expects Starling Texture for image resource by default - but any Texture-derived class should be fine. 
-// Caller may provide Texture taken from some atlas, for example
-- By default all nodes are visible after creation. This can be further altered with Compositions
-
+* CONVENTIONS:
+* gLTF and all required resources are expected to be present in gLTF (base64, binary chunks) or already loaded (as Starling assets, for example)
+* gLTF can be parsed for external files list in advance - so they can be loaded before scene creation
+* Conversions: Blender meters to starling pixels use kMeters3D_to_Pixels2D_ratio
+* PFFScene expects Starling Texture for image resource by default - but any Texture-derived class should be fine. 
+* - Caller may provide Texture taken from some atlas, for example
+* By default all nodes are visible after creation. This can be further altered with Compositions
 **/
 
 class PFFScene {
@@ -35,9 +33,11 @@ class PFFScene {
 	public var gltf_root: DisplayObjectContainer = null;
 	// Plain list of Starling objects (same order as gLTF nodes order)
 	public var nodes_list: Array<PFFAnimNode> = null;
-	// Blender`s custom props from scene root node. Caller may overload some field before loading gltf
-	// can be used to drive custom node creations
+	// Blender`s custom props from scene root node
+	// Caller may overload some fields before loading gltf (to customize node creation, etc)
 	public var nodes_rootprops: Utils.MapS2A = new Utils.MapS2A();
+	// Visibility-switch rules per composition
+	public var nodes_compositions: Utils.MapS2A = new Utils.MapS2A();
 
 	public var gltf_load_verbose: Bool = false;
 	public var gltf_load_warnings: Utils.ArrayS = null;
@@ -45,15 +45,15 @@ class PFFScene {
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
 	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];// px_x = loc[0], px_y = loc[2]
-	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale
+	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
-	* @param gltf_resource_name: glft-file key in gltf_resources
-	* @param gltf_resources: all resources required for glft loading. key: <file name>, value: starling.AssetManager.getAsset(<asset for key>)
-	* @return root DisplayObject if no errors or null.
-	* In case of errors/warnings gltf_load_warnings will be filled with explanations
-	* In case of scene creation problems process will continue with best-effort fallbacks, is possible
+	* gltf_resource_name: glft-file key in gltf_resources
+	* gltf_resources: all resources required for glft loading. key: <file name>, value: starling.AssetManager.getAsset(<asset for key>)
+	* returns gltf_root:DisplayObjectContainer (if no errors) or null.
+	* In case of errors/warnings: gltf_load_warnings should contain explanations
+	* In case of problems scene creation process should continue with best-effort fallbacks (is possible)
 	**/
 	public function makeSceneTree(gltf_resource_name:String, gltf_resources:Map<String,Dynamic>): DisplayObjectContainer
 	{
@@ -61,6 +61,7 @@ class PFFScene {
 		gltf_root = null;// no unchild if != null, caller may use it further
 		nodes_list = null;
 		// nodes_rootprops - no change, can be used to drive custom node creations
+		nodes_compositions = new Utils.MapS2A();
 		gltf_load_warnings = null;
 		function resource_by_uri(index: Int, uri: String): Bytes {
 			if(Utils.safeLen(uri) > 0){
@@ -323,8 +324,8 @@ class PFFScene {
 
 	/**
 	* Inspect gLTF/glb file and list all external resources required for preloading
-	* @param gltf_resource_name: glft-file key in gltf_resources
-	* @param gltf_resources: glft/glb file must be present
+	* gltf_resource_name: glft-file key in gltf_resources
+	* gltf_resources: glft/glb file must be present
 	**/
 	public static function extractExternalResources(gltf_resource_name:String, gltf_resources:Utils.MapS2A):Utils.ArrayS
 	{
@@ -383,21 +384,61 @@ class PFFScene {
 	}
 
 	/**
-	* Store composition visibility rules (according to visible_set/hidden_set) for future use
-	* visible_set/hidden_set contain strings that checked against each node full_path in form "root-name/child-name/.../node-name"
-	* visible_set/hidden_set may contain "*" string, which matches all nodes
+	* Store composition visibility rules (according to show_set/hide_set) for future use
+	* show_set/hide_set contain strings that checked against each node full_path in form "root-name/child-name/.../node-name"
+	* show_set/hide_set may contain "*" string to match ALL nodes
 	**/
-	public function addComposition(composition_name:String, visible_set:Utils.ArrayS, hidden_set:Utils.ArrayS):Void
+	public function addComposition(composition_name:String, show_set:Utils.ArrayS, hide_set:Utils.ArrayS):Void
 	{
+		nodes_compositions[composition_name] = [show_set, hide_set];
 		return;
 	}
 
 	/**
-	* * Alter nodes visibility according to composition
+	* Alter nodes visibility according to composition
 	**/
-	public function activateComposition(composition_name):Bool
+	public function activateComposition(composition_name:String):Bool
 	{
+		var vis_rules:Utils.ArrayA = nodes_compositions[composition_name];
+		if(vis_rules == null){
+			return false;
+		}
+		var vis_rules_on:Utils.ArrayS = vis_rules[0];
+		var vis_rules_off:Utils.ArrayS = vis_rules[1];
+		var spr_on:Array<PFFAnimNode> = [];
+		var spr_off:Array<PFFAnimNode> = [];
+		for(nd in nodes_list){
+			if(nd.sprite == null){
+				continue;
+			}
+			if(vis_rules_on.length > 0){
+				if(vis_rules_on[0] == '*' || Utils.strIndexOfAny(nd.full_path, vis_rules_on) >= 0 ){
+					spr_on.push(nd);
+				}
+			}
+			if(vis_rules_off.length > 0){
+				if(vis_rules_off[0] == '*' || Utils.strIndexOfAny(nd.full_path, vis_rules_off) >= 0 ){
+					spr_off.push(nd);
+				}
+			}
+		}
+		log_i('activating composition: ${composition_name}');
+		makeCompositionActive(composition_name, spr_on, spr_off);
 		return true;
+	}
+
+	/**
+	* Can be overloaded to implement separate visibility change logic (fades/effect/etc)
+	**/
+	public function makeCompositionActive(composition_name:String, spritesToEnable:Array<PFFAnimNode>, spritesToDisable:Array<PFFAnimNode>):Void {
+		for(spr in spritesToDisable){
+			spr.sprite.visible = false;
+			spr.visible = false;
+		}
+		for(spr in spritesToEnable){
+			spr.sprite.visible = true;
+			spr.visible = true;
+		}
 	}
 
 	public function log_i(message:String) {

@@ -14,6 +14,7 @@ typedef ArrayI = Array<Int>;
 typedef ArrayS = Array<String>;
 typedef ArrayA = Array<Any>;
 typedef MapS2A = Map<String,Any>;
+// same as https://api.haxe.org/haxe/ds/index.html 'Either'... but Dynamic as a base
 abstract Either<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
 
 class Utils {
@@ -192,5 +193,37 @@ class Utils {
 			return -1;
 		}
 		return 1;
+	}
+
+	public static function strIndexOfAny(str:String, searchForStrOrArray:ArrayS, lowercase:Bool = false) : Int {
+		if(str == null || searchForStrOrArray == null){
+			return -1;
+		}
+		var strt = str;
+		if(lowercase){
+			strt = strt.toLowerCase();
+		}
+		// if(Std.isOfType(searchForStrOrArray, String)){
+		// 	var searchf:String = searchForStrOrArray;
+		// 	if(lowercase){
+		// 		searchf = searchf.toLowerCase();
+		// 	}
+		// 	return strt.indexOf(searchf);
+		// }
+		var searchs:ArrayS = searchForStrOrArray;
+		if(searchs == null){
+			return -1;
+		}
+		for(i in 0...searchs.length){
+			var searchf:String = searchs[i];
+			if(lowercase){
+				searchf = searchf.toLowerCase();
+			}
+			var iof = strt.indexOf(searchf);
+			if(iof >= 0){
+				return iof;
+			}
+		}
+		return -1;
 	}
 }
