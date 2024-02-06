@@ -65,6 +65,9 @@ cd ./test
 haxe -x TestMain -lib buddy -p ../src
 ```
 
-# gLTF loading based on haxe-gltf
-haxe-gltf: A Haxe library for reading (and eventually, writing) [GLTF](https://github.com/KhronosGroup/glTF) files.
+---
+
+> [!NOTE]
+> gLTF loading based on haxe-gltf
+> haxe-gltf: A Haxe library for reading (and eventually, writing) [GLTF](https://github.com/KhronosGroup/glTF) files.
 
