@@ -351,6 +351,7 @@ class PFFScene {
 			spr_props.pivotX = 0;
 			spr_props.pivotY = 0;
 		}
+		defl_spr.touchable = false;
 		Utils.undumpSprite(defl_spr, spr_props);
 		// trace("Sprite init", node_name, spr_props.toString());
 		return defl_spr;
@@ -473,6 +474,18 @@ class PFFScene {
 			spr.sprite.visible = true;
 			spr.visible = true;
 		}
+	}
+
+	public function getNodeByPath(full_path:String, fuzzy_search:Bool = false):PFFAnimNode {
+		for(nd in nodes_list){
+			if(nd.full_path == full_path){
+				return nd;
+			}
+			if(fuzzy_search && nd.full_path.indexOf(full_path) >= 0){
+				return nd;
+			}
+		}
+		return null;
 	}
 
 	public function log_i(message:String) {
