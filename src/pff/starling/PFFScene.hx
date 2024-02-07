@@ -46,6 +46,7 @@ class PFFScene {
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
 	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];// px_x = loc[0], px_y = loc[2]
 	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
+	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
@@ -147,17 +148,26 @@ class PFFScene {
 				}
 			}
 			var customprops = nd.extras;
-			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
-			var node_sprite:DisplayObjectContainer = makeStarlingSprite(nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
-			if(node_sprite == null){
-				node_sprite = new starling.display.Sprite();
-			}
-			// makeStarlingSprite can be overloaded - undumping initial sprite values from sprite itself
 			var starling_node = new PFFAnimNode();
-			Utils.dumpSprite(node_sprite, starling_node);
-			node_sprite.name = nd.name;
+			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
+			if(nd.name != kPffMask_nodename){
+				var node_sprite:DisplayObjectContainer = makeStarlingSprite(nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
+				if(node_sprite == null){
+					node_sprite = new starling.display.Sprite();
+				}
+				// makeStarlingSprite can be overloaded - undumping initial sprite values from sprite itself
+				Utils.dumpSprite(node_sprite, starling_node);
+				node_sprite.name = nd.name;
+				starling_node.sprite = node_sprite;
+			}else if(bbox_px != null){
+				var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+				var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
+				Utils.undumpSprite(defl_quad, spr_props);
+				Utils.dumpSprite(defl_quad, starling_node);
+				defl_quad.name = nd.name;
+				starling_node.sprite = defl_quad;
+			}
 			starling_node.gltf_id = nd.id;
-			starling_node.sprite = node_sprite;
 			starling_node.customprops = customprops;
 			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis];
 			nodes_list.push(starling_node);
@@ -167,9 +177,12 @@ class PFFScene {
 		// - gltf_root = first node with NO PARENTS
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
-			var node_sprite = starling_node.sprite;
+			var node_sprite:DisplayObjectContainer = null;
+			if(Std.isOfType(starling_node.sprite, DisplayObjectContainer)){
+				node_sprite = cast(starling_node.sprite, DisplayObjectContainer);
+			}
 			var gltf_node = gltf_struct.nodes[i];// starling_node.gltf_id
-			if(gltf_node.children!=null && gltf_node.children.length > 0){
+			if(gltf_node.children != null && gltf_node.children.length > 0 && node_sprite != null){
 				var child_order = gltf_node.children.toArray();
 				// Sorting according to child node location Z-compinent
 				// Critical for rendering order on the same hierarchy level
@@ -184,11 +197,26 @@ class PFFScene {
 					// if(child_starling_nodes.length == 1){
 					// var child_starling_node = child_starling_nodes[0];
 					var child_starling_node = nodes_list[child_id];
-					var child_node_sprite = child_starling_node.sprite;
+					var child_gltf_node = gltf_struct.nodes[child_id];
+					child_starling_node.gltf_parent_id = starling_node.gltf_id;
+					if(child_gltf_node.name == kPffMask_nodename){
+						// Special case: quad mask
+						trace("- adding MASK", node_sprite, child_starling_node.sprite);
+						if(child_starling_node.sprite != null){
+							node_sprite.mask = child_starling_node.sprite;
+						}
+						continue;
+					}
+					var child_node_sprite:DisplayObjectContainer = null;
+					if(Std.isOfType(child_starling_node.sprite, DisplayObjectContainer)){
+						child_node_sprite = cast(child_starling_node.sprite, DisplayObjectContainer);
+					}
+					if(child_node_sprite == null){
+						continue;
+					}
 					if(child_node_sprite.parent != null){
 						log_e('warning: node parent not empty: ${child_node_sprite.name}');
 					}
-					child_starling_node.gltf_parent_id = starling_node.gltf_id;
 					node_sprite.addChild(child_node_sprite);
 					// trace("- child", gltf_node.name, gltf_node.id, child_gltf_node.name, child_gltf_node.id);
 					// }else{
@@ -199,8 +227,11 @@ class PFFScene {
 		}
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
-			var node_sprite = starling_node.sprite;
-			if(gltf_root == null && node_sprite.parent == null){
+			var node_sprite:DisplayObjectContainer = null;
+			if(Std.isOfType(starling_node.sprite, DisplayObjectContainer)){
+				node_sprite = cast(starling_node.sprite, DisplayObjectContainer);
+			}
+			if(gltf_root == null && node_sprite != null && node_sprite.parent == null){
 				// var gltf_node = gltf_struct.nodes[i];
 				// log_i("- found root", gltf_node.id, gltf_node.name);
 				gltf_root = node_sprite;
@@ -217,11 +248,13 @@ class PFFScene {
 					}
 				}
 			}
-			var hierarchy = Utils.getHierarchyChain(node_sprite);
-			var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
-			starling_node.full_path = hierarchy_names.join("/");
-			// if(starling_node.full_path == 'demo/bg'){starling_node.sprite.visible = false;}
-			// var spr_props = Utils.dumpSprite(starling_node.sprite, null);
+			if(node_sprite != null){
+				var hierarchy = Utils.getHierarchyChain(node_sprite);
+				var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
+				starling_node.full_path = hierarchy_names.join("/");
+			}else if(starling_node.sprite != null){
+				starling_node.full_path = starling_node.sprite.name;
+			}
 			log_i('Sprite: ${starling_node.full_path}, ${starling_node.toString()}');
 		}
 		if(gltf_root == null){
@@ -288,7 +321,7 @@ class PFFScene {
 		}
 		var spr_props:PFFAnimNode.PFFNodeProps = new PFFAnimNode.PFFNodeProps();
 		spr_props.visible = true;
-		spr_props.alpha_self = 1.0;
+		spr_props.alpha_self = trs_scale[kMetersXYZ_freeAxis];
 		spr_props.x = pos_x;
 		spr_props.y = pos_y;
 		spr_props.scaleX = scale_x;
@@ -308,10 +341,12 @@ class PFFScene {
 	public function makeStarlingSprite(node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
 		var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
-		if(node_texture != null){
+		if(bbox_px != null){
 			// Quad
 			var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
-			defl_quad.texture = node_texture;
+			if(node_texture != null){
+				defl_quad.texture = node_texture;
+			}
 			defl_spr.addChild(defl_quad);
 		}else{
 			spr_props.pivotX = 0;
@@ -330,11 +365,11 @@ class PFFScene {
 	public static function extractExternalResources(gltf_resource_name:String, gltf_resources:Utils.MapS2A):Utils.ArrayS
 	{
 		if(Utils.safeLen(gltf_resource_name) == 0 || Utils.safeLen(gltf_resources) == 0){
-			log("extractExternalResources: invalid input");
+			log('extractExternalResources: invalid input: ${gltf_resource_name}');
 			return null;
 		}
 		if(Utils.safeLen(gltf_resources[gltf_resource_name]) == 0){
-			log("extractExternalResources: invalid input");
+			log('extractExternalResources: empty input: ${gltf_resource_name}');
 			return null;
 		}
 

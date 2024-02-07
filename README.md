@@ -21,23 +21,22 @@
   - gLTF 'Actions' exporter resets any timeline offset anyway
 - Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
 
-
 # Alpha && Clipping animation conventions
 
 gLTF does not support non-TRS animation targets. So some extra efforts required to make it happen with Blender && gLTF.
 1) Basic alpha derived from node's Scale Z (Blender z-axis), since it's not used for 2D scaling and defaults to 1.0. Named `alpha_self` in hx
 2) Animated clipping: some Nodes are served as "placeholders" for holding such animations.
-- Each Empty (in Blender) can contain Plane (quad) Mesh object with the name "#pff:mask". Such object have special meaning for animation in Starling:
- - Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer
- - if ScaleX && ScaleY == 0.0 clipping mask ignored completely (no realtime overhead). `alpha_mask` animation still can be used
-3) "#pff:mask" ScaleZ also can be used to animate alpha on enclosing container. This is named `alpha_mask` in hx
-4) Alpha blending quirks: TODO
+- Each Empty can contain Plane (quad) Mesh object with the name "#pff:mask". Such object have special meaning for animation in Starling
+- Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer
 
 # Limitations && Plans
 
 - [ ] Planned: Base64 in image URIs
 - [ ] Planned: GLB format
-- [ ] Planned: Some sort of automated atlas support - Auto-packing into atlas on load
+- [ ] Planned: Alpha-quality options per node
+  - There is a problem with alpha fades over overlapping child - overlaps are visible on sub-images
+  - Options: basic (per-sprite), push-to-childs (ok for simple hiers), filter-flattening (root sprite rendered offscreen with alpha 1.0 first)
+- [ ] Planned: Optimization: Some sort of automated atlas support - Auto-packing into atlas on load
   - currently atlas can be utilized simply by providing atlas textures on request during scene creation
 - [x] Done: Base64 in buffers URIs
 - [x] Done: Respect nodes z-order for starling sprites layout

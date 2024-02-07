@@ -4,8 +4,8 @@ import haxe.io.Bytes;
 import haxe.ds.Vector;
 import starling.display.Stage;
 import starling.display.Sprite;
-import starling.display.DisplayObject;
 import openfl.utils.ByteArray;
+import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
 
 typedef VectorF = Vector<Float>;
@@ -141,7 +141,8 @@ class Utils {
 	static public function undumpAnimSprite(spr:DisplayObject, props:PFFAnimNode.PFFAnimNode):Void {
 		if(props.a_dirty > 0){
 			spr.visible = props.visible;
-			spr.alpha = props.alpha_self*props.alpha_mask;
+			// spr.alpha = props.alpha_self*props.alpha_mask;
+			spr.alpha = props.alpha_self;
 		}
 		if(props.xy_dirty > 0){
 			spr.x = props.x;

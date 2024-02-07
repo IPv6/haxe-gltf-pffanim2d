@@ -1,4 +1,5 @@
 package pff.starling;
+import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
 
 class PFFNodeProps {
@@ -21,14 +22,14 @@ class PFFNodeProps {
 
 class PFFAnimNode extends PFFNodeProps {
 	public function new(){super();};
-	public var sprite:DisplayObjectContainer = null;
+	public var sprite:starling.display.DisplayObject = null;// Sprite or Quad (clip mask)
 	public var gltf_id:Int = -1;
 	public var gltf_parent_id:Int = -1;
 	public var full_path:String = "";
 	public var customprops:Dynamic = null;
 
 	public var z_order:Float = 0;
-	public var alpha_mask:Float = 1;
+	// public var alpha_mask:Float = 1;
 	public var xy_dirty:Int = 0;
 	public var sxsy_dirty:Int = 0;
 	public var r_dirty:Int = 0;
