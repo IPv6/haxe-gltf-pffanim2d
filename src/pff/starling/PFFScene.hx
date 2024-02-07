@@ -1,6 +1,5 @@
 package pff.starling;
 
-import sys.net.UdpSocket;
 import gltf.*;
 import haxe.io.Bytes;
 import haxe.crypto.Base64;
