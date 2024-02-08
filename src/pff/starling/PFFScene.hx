@@ -148,27 +148,25 @@ class PFFScene {
 			}
 			var customprops = nd.extras;
 			var starling_node = new PFFAnimNode();
-			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
-			if(nd.name != kPffMask_nodename){
-				var node_sprite:DisplayObjectContainer = makeStarlingSprite(nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px, customprops);
-				if(node_sprite == null){
-					node_sprite = new starling.display.Sprite();
-				}
-				// makeStarlingSprite can be overloaded - undumping initial sprite values from sprite itself
-				Utils.dumpSprite(node_sprite, starling_node);
-				node_sprite.name = nd.name;
-				starling_node.sprite = node_sprite;
-			}else if(bbox_px != null){
-				var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
-				var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
-				Utils.undumpSprite(defl_quad, spr_props);
-				Utils.dumpSprite(defl_quad, starling_node);
-				defl_quad.name = nd.name;
-				starling_node.sprite = defl_quad;
-			}
+			starling_node.full_path = nd.name;// Basic default, no hier
 			starling_node.gltf_id = nd.id;
 			starling_node.customprops = customprops;
 			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis];
+			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
+			if(nd.name == kPffMask_nodename){
+				// Special case for kPffMask_nodename
+				if(bbox_px != null){
+					var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+					var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
+					Utils.undumpSprite(defl_quad, spr_props);
+					Utils.dumpSprite(defl_quad, starling_node);
+					defl_quad.name = nd.name;
+					starling_node.sprite = defl_quad;
+				}
+			}else{
+				// fillStarlingNode can be overloaded - undumping initial sprite values from sprite itself
+				fillStarlingNode(starling_node, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+			}
 			nodes_list.push(starling_node);
 		}
 
@@ -251,8 +249,6 @@ class PFFScene {
 				var hierarchy = Utils.getHierarchyChain(node_sprite);
 				var hierarchy_names = [ for (i in 0...(hierarchy.length) ) hierarchy[hierarchy.length-i-1].name ];
 				starling_node.full_path = hierarchy_names.join("/");
-			}else if(starling_node.sprite != null){
-				starling_node.full_path = starling_node.sprite.name;
 			}
 			log_i('Sprite: ${starling_node.full_path}, ${starling_node.toString()}');
 		}
@@ -337,7 +333,7 @@ class PFFScene {
 	* Starling node generator. Can be overloaded to customazi starling sprite creation process
 	* For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	**/
-	public function makeStarlingSprite(node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF, customprops:Dynamic):DisplayObjectContainer {
+	public function fillStarlingNode(starling_node:PFFAnimNode, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
@@ -354,7 +350,10 @@ class PFFScene {
 		defl_spr.touchable = false;
 		Utils.undumpSprite(defl_spr, spr_props);
 		// trace("Sprite init", node_name, spr_props.toString());
-		return defl_spr;
+		Utils.dumpSprite(defl_spr, starling_node);
+		defl_spr.name = node_name;
+		starling_node.sprite = defl_spr;
+		return true;
 	}
 
 	/**
