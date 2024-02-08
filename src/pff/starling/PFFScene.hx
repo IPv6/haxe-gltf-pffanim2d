@@ -1,6 +1,9 @@
 package pff.starling;
 
 import gltf.*;
+import pff.starling.PFFAnimManager.PFFNodeProps;
+import pff.starling.PFFAnimManager.PFFAnimNode;
+import pff.starling.PFFAnimManager.PFFAnimState;
 import haxe.io.Bytes;
 import haxe.crypto.Base64;
 import openfl.utils.ByteArray;
@@ -32,6 +35,8 @@ class PFFScene {
 	public var gltf_root: DisplayObjectContainer = null;
 	// Plain list of Starling objects (same order as gLTF nodes order)
 	public var nodes_list: Array<PFFAnimNode> = null;
+	// Plain list of Animation states (same order as gLTF animations order)
+	public var animstates_list: Array<PFFAnimState> = null;
 	// Blender`s custom props from scene root node
 	// Caller may overload some fields before loading gltf (to customize node creation, etc)
 	public var nodes_rootprops: Utils.MapS2A = new Utils.MapS2A();
@@ -156,7 +161,7 @@ class PFFScene {
 			if(nd.name == kPffMask_nodename){
 				// Special case for kPffMask_nodename
 				if(bbox_px != null){
-					var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+					var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 					var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
 					Utils.undumpSprite(defl_quad, spr_props);
 					Utils.dumpSprite(defl_quad, starling_node);
@@ -252,6 +257,17 @@ class PFFScene {
 			}
 			log_i('Sprite: ${starling_node.full_path}, ${starling_node.toString()}');
 		}
+		animstates_list = [];
+		if(gltf_struct.animations != null){
+			for(i in 0...(gltf_struct.animations.length)){
+				var nd = gltf_struct.animations[i];
+				var anim_state:PFFAnimState = new PFFAnimState();
+				anim_state.full_path = nd.name;
+				anim_state.gltf_id = i;
+				// gltfTimeMin gltfTimeMax
+				animstates_list.push(anim_state);
+			}
+		}
 		if(gltf_root == null){
 			log_e("warning: scene root not found");
 		}
@@ -298,7 +314,7 @@ class PFFScene {
 		return null;
 	}
 
-	public function prepareStarlingSpriteProps(trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFAnimNode.PFFNodeProps {
+	public function prepareStarlingSpriteProps(trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFNodeProps {
 		var pos_x:Float = trs_location_px[kMetersXYZ_to_PixelsXY[0]];
 		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]];
 		var scale_x:Float = trs_scale[kMetersXYZ_to_PixelsXY[0]];
@@ -314,7 +330,7 @@ class PFFScene {
 			bbox_max_x = bbox_px[kMetersXYZ_to_PixelsXY[0] + 3];
 			bbox_max_y = bbox_px[kMetersXYZ_to_PixelsXY[1] + 3];
 		}
-		var spr_props:PFFAnimNode.PFFNodeProps = new PFFAnimNode.PFFNodeProps();
+		var spr_props:PFFNodeProps = new PFFNodeProps();
 		spr_props.visible = true;
 		spr_props.alpha_self = trs_scale[kMetersXYZ_freeAxis];
 		spr_props.x = pos_x;
@@ -334,7 +350,7 @@ class PFFScene {
 	* For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	**/
 	public function fillStarlingNode(starling_node:PFFAnimNode, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
-		var spr_props:PFFAnimNode.PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
 			// Quad
@@ -439,23 +455,8 @@ class PFFScene {
 		}
 		var vis_rules_on:Utils.ArrayS = vis_rules[0];
 		var vis_rules_off:Utils.ArrayS = vis_rules[1];
-		var spr_on:Array<PFFAnimNode> = [];
-		var spr_off:Array<PFFAnimNode> = [];
-		for(nd in nodes_list){
-			if(nd.sprite == null){
-				continue;
-			}
-			if(vis_rules_on.length > 0){
-				if(vis_rules_on[0] == '*' || Utils.strIndexOfAny(nd.full_path, vis_rules_on) >= 0 ){
-					spr_on.push(nd);
-				}
-			}
-			if(vis_rules_off.length > 0){
-				if(vis_rules_off[0] == '*' || Utils.strIndexOfAny(nd.full_path, vis_rules_off) >= 0 ){
-					spr_off.push(nd);
-				}
-			}
-		}
+		var spr_on:Array<PFFAnimNode> = filterNodesByPath(vis_rules_on, true);
+		var spr_off:Array<PFFAnimNode> = filterNodesByPath(vis_rules_off, true);
 		log_i('activating composition: ${composition_name}');
 		makeCompositionActive(composition_name, spr_on, spr_off);
 		return true;
@@ -465,28 +466,59 @@ class PFFScene {
 	* Can be overloaded to implement separate visibility change logic (fades/effect/etc)
 	**/
 	public function makeCompositionActive(composition_name:String, spritesToEnable:Array<PFFAnimNode>, spritesToDisable:Array<PFFAnimNode>):Void {
-		for(spr in spritesToDisable){
-			spr.sprite.visible = false;
-			spr.visible = false;
+		if(spritesToDisable != null){
+			for(spr in spritesToDisable){
+				spr.sprite.visible = false;
+				spr.visible = false;
+			}
 		}
-		for(spr in spritesToEnable){
-			spr.sprite.visible = true;
-			spr.visible = true;
+		if(spritesToEnable != null){
+			for(spr in spritesToEnable){
+				spr.sprite.visible = true;
+				spr.visible = true;
+			}
 		}
 	}
 
-	public function getNodeByPath(full_path:String, fuzzy_search:Bool = false):PFFAnimNode {
+	public function filterNodesByPath(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimNode> {
+		var res:Array<PFFAnimNode> = [];
+		if(Utils.safeLen(full_paths) == 0){
+			return res;
+		}
 		for(nd in nodes_list){
-			if(nd.full_path == full_path){
-				return nd;
-			}
-			if(fuzzy_search && nd.full_path.indexOf(full_path) >= 0){
-				return nd;
+			for(fp in full_paths){
+				if(fp == "*"){
+					res.push(nd);
+				}else if(nd.full_path == fp){
+					res.push(nd);
+				} if(fuzzy_search && nd.full_path.indexOf(fp) >= 0){
+					res.push(nd);
+				}
 			}
 		}
-		return null;
+		return res;
 	}
 
+	public function filterAnimsByName(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimState> {
+		var res:Array<PFFAnimState> = [];
+		if(Utils.safeLen(full_paths) == 0 || gltf_struct == null || gltf_struct.animations == null){
+			return res;
+		}
+		for(nd in animstates_list){
+			for(fp in full_paths){
+				if(fp == "*"){
+					res.push(nd);
+				}else if(nd.full_path == fp){
+					res.push(nd);
+				} if(fuzzy_search && nd.full_path.indexOf(fp) >= 0){
+					res.push(nd);
+				}
+			}
+		}
+		return res;
+	}
+
+	// ===============
 	public function log_i(message:String) {
 		if(!gltf_load_verbose){
 			return;

@@ -1,5 +1,8 @@
 package pff.starling;
 
+import pff.starling.PFFAnimManager.PFFNodeProps;
+import pff.starling.PFFAnimManager.PFFAnimNode;
+
 import haxe.io.Bytes;
 import haxe.ds.Vector;
 import starling.display.Stage;
@@ -111,9 +114,9 @@ class Utils {
 		return bytes;
 	}
 
-	static public function dumpSprite(spr:DisplayObject, props:PFFAnimNode.PFFNodeProps):PFFAnimNode.PFFNodeProps {
+	static public function dumpSprite(spr:DisplayObject, props:PFFNodeProps):PFFNodeProps {
 		if(props == null){
-			props = new PFFAnimNode.PFFNodeProps();
+			props = new PFFNodeProps();
 		}
 		props.visible = spr.visible;
 		props.alpha_self = spr.alpha;
@@ -126,7 +129,7 @@ class Utils {
 		props.rotation = spr.rotation;
 		return props;
 	}
-	static public function undumpSprite(spr:DisplayObject, props:PFFAnimNode.PFFNodeProps):Void {
+	static public function undumpSprite(spr:DisplayObject, props:PFFNodeProps):Void {
 		spr.visible = props.visible;
 		spr.alpha = props.alpha_self;
 		spr.x = props.x;
@@ -138,7 +141,7 @@ class Utils {
 		spr.rotation = props.rotation;
 	}
 
-	static public function undumpAnimSprite(spr:DisplayObject, props:PFFAnimNode.PFFAnimNode):Void {
+	static public function undumpAnimSprite(spr:DisplayObject, props:PFFAnimNode):Void {
 		if(props.a_dirty > 0){
 			spr.visible = props.visible;
 			// spr.alpha = props.alpha_self*props.alpha_mask;
