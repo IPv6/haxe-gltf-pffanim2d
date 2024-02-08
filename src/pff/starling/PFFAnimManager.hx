@@ -1,6 +1,7 @@
 package pff.starling;
 import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
+import starling.animation.*;
 
 class PFFNodeProps {
 	public function new(){};
@@ -47,6 +48,10 @@ class PFFAnimNode extends PFFNodeProps {
 	public var mask_dirty:Int = 0;
 }
 
-class PFFAnimManager {
+class PFFAnimManager implements IAnimatable {
 	public function new(){};
+	public function advanceTime(time:Float):Void {
+		
+	}
 }
+

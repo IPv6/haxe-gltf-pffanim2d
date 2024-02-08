@@ -440,7 +440,9 @@ class PFFScene {
 	**/
 	public function addComposition(composition_name:String, show_set:Utils.ArrayS, hide_set:Utils.ArrayS):Void
 	{
-		nodes_compositions[composition_name] = [show_set, hide_set];
+		var spr_on:Array<PFFAnimNode> = filterNodesByPath(show_set, true);
+		var spr_off:Array<PFFAnimNode> = filterNodesByPath(hide_set, true);
+		nodes_compositions[composition_name] = [spr_on, spr_off];
 		return;
 	}
 
@@ -453,10 +455,8 @@ class PFFScene {
 		if(vis_rules == null){
 			return false;
 		}
-		var vis_rules_on:Utils.ArrayS = vis_rules[0];
-		var vis_rules_off:Utils.ArrayS = vis_rules[1];
-		var spr_on:Array<PFFAnimNode> = filterNodesByPath(vis_rules_on, true);
-		var spr_off:Array<PFFAnimNode> = filterNodesByPath(vis_rules_off, true);
+		var spr_on:Array<PFFAnimNode> = vis_rules[0];
+		var spr_off:Array<PFFAnimNode> = vis_rules[1];
 		log_i('activating composition: ${composition_name}');
 		makeCompositionActive(composition_name, spr_on, spr_off);
 		return true;
@@ -468,14 +468,20 @@ class PFFScene {
 	public function makeCompositionActive(composition_name:String, spritesToEnable:Array<PFFAnimNode>, spritesToDisable:Array<PFFAnimNode>):Void {
 		if(spritesToDisable != null){
 			for(spr in spritesToDisable){
-				spr.sprite.visible = false;
+				if(spr.sprite != null){
+					spr.sprite.visible = false;
+				}
 				spr.visible = false;
+				spr.a_dirty++;
 			}
 		}
 		if(spritesToEnable != null){
 			for(spr in spritesToEnable){
-				spr.sprite.visible = true;
+				if(spr.sprite != null){
+					spr.sprite.visible = true;
+				}
 				spr.visible = true;
+				spr.a_dirty++;
 			}
 		}
 	}
