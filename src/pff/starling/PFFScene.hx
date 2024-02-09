@@ -111,11 +111,12 @@ class PFFScene {
 		kMetersXYZ_freeAxis = xyz_avail[0];
 		// First pass - Creating all nodes separately
 		nodes_list = [];
+		var tmp_vec = new Utils.VectorF(3);
 		for(nd in gltf_struct.nodes){
 			var name = nd.name;
-			var trs_location_px = Utils.xyz2xyzScaled(nd.translation, kMeters3D_to_Pixels2D_ratio);
-			var trs_scale = Utils.xyz2xyzScaled(nd.scale);
-			var trs_rotation_eulerXYZ = Utils.quaternion2euler(nd.rotation);
+			var trs_location_px = Utils.vec2vecScaled(nd.translation, kMeters3D_to_Pixels2D_ratio, tmp_vec).toArray();
+			var trs_scale = Utils.vec2vecScaled(nd.scale,1.0, tmp_vec).toArray();
+			var trs_rotation_eulerXYZ = Utils.quat2euler(nd.rotation);
 			var bbox_px:Utils.ArrayF = null;
 			var texture:Texture = null;
 			if(nd.mesh != null && Utils.safeLen(nd.mesh.primitives) > 0){
@@ -144,8 +145,8 @@ class PFFScene {
 					// Positions. getting BBOX directly fomr min-max
 					for(att in prim.attributes){
 						if(att.name == "POSITION" && att.accessor != null){
-							var bbox_min_px = Utils.xyz2xyzScaled(att.accessor.min, kMeters3D_to_Pixels2D_ratio);
-							var bbox_max_px = Utils.xyz2xyzScaled(att.accessor.max, kMeters3D_to_Pixels2D_ratio);
+							var bbox_min_px = Utils.vec2vecScaled(att.accessor.min, kMeters3D_to_Pixels2D_ratio, tmp_vec).toArray();
+							var bbox_max_px = Utils.vec2vecScaled(att.accessor.max, kMeters3D_to_Pixels2D_ratio, tmp_vec).toArray();
 							bbox_px = bbox_min_px.concat(bbox_max_px);
 						}
 					}
@@ -264,7 +265,20 @@ class PFFScene {
 				var anim_state:PFFAnimState = new PFFAnimState();
 				anim_state.full_path = nd.name;
 				anim_state.gltf_id = i;
-				// gltfTimeMin gltfTimeMax
+				anim_state.gltfTimeMin = -1;
+				anim_state.gltfTimeMax = -1;
+				for(ch in nd.channels){
+					for(smp in ch.samples){
+						if(anim_state.gltfTimeMin < 0 || anim_state.gltfTimeMax < 0){
+							anim_state.gltfTimeMin = smp.input;
+							anim_state.gltfTimeMax = smp.input;
+							continue;
+						}
+						anim_state.gltfTimeMin = Math.min(anim_state.gltfTimeMin,smp.input);
+						anim_state.gltfTimeMax = Math.max(anim_state.gltfTimeMax,smp.input);
+					}
+				}
+				trace("- loaded anim", anim_state.full_path, anim_state.gltfTimeMin, anim_state.gltfTimeMax);
 				animstates_list.push(anim_state);
 			}
 		}
@@ -505,6 +519,25 @@ class PFFScene {
 		return res;
 	}
 
+	// ===============
+	public function log_i(message:String) {
+		if(!gltf_load_verbose){
+			return;
+		}
+		log(message);
+	}
+	public function log_e(message:String) {
+		if(gltf_load_warnings == null){
+			gltf_load_warnings = new Array<String>();
+		}
+		gltf_load_warnings.push(message);
+		log(message);
+	}
+	private static function log(str:String) {
+		trace("PFFScene: ", str);
+	}
+
+	// ===============
 	public function filterAnimsByName(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimState> {
 		var res:Array<PFFAnimState> = [];
 		if(Utils.safeLen(full_paths) == 0 || gltf_struct == null || gltf_struct.animations == null){
@@ -524,21 +557,72 @@ class PFFScene {
 		return res;
 	}
 
-	// ===============
-	public function log_i(message:String) {
-		if(!gltf_load_verbose){
-			return;
+	/**
+	* Animations are applied in order using "influence" to node props first
+	* Then all affected nodes+props are applied to real sratling sprites
+	* anims: animations to apply, like "NLA Stack". Can be queried by filterAnimsByName
+	* gltfTime: Blender-time to sample animation data
+	**/
+	public function applyAnimations(anims:Array<PFFAnimState>, gltfTime:Float): Bool {
+		for(anim in anims){
+			anim.gltfTime = gltfTime;
+			if(anim.infl < Utils.GLM_EPSILON){
+				continue;
+			}
+			var nd = gltf_struct.animations[anim.gltf_id];
+			for(ch in nd.channels){
+				// Looking gltfTime in ch.timestamps
+				var smp = ch.samples;
+				var ch_idx = Utils.binarySearch(ch.timestamps, gltfTime);
+				if(ch_idx<0){
+					continue;
+				}
+				var td = (ch.timestamps[ch_idx+1]-ch.timestamps[ch_idx]);
+				var t = (gltfTime-ch.timestamps[ch_idx])/td;
+				var intrp:String = ch.interpolation;
+				if(intrp == "LINEAR" && ch.path == "rotation"){
+					trace("!! switch to lerp");
+					intrp = "SLERP";
+				}
+				trace("- interpolating", anim.full_path, gltfTime, t, intrp);
+				// Getting interpolated vector
+				var val_at_t:Utils.VectorF = smp[ch_idx].output.copy();//  "STEP"
+				if(intrp == "LINEAR"){
+					var val_at_t2 = smp[ch_idx+1].output;
+					for(vi in 0...val_at_t.length){
+						val_at_t[vi] = (1.0-t)*val_at_t[vi] + t*val_at_t2[vi];
+					}
+				}
+				if(intrp == "SLERP"){
+					// When targeting a rotation, spherical linear interpolation (slerp) should be used to interpolate quaternions.
+					Utils.quatSlerp(smp[ch_idx].output, smp[ch_idx+1].output, t, val_at_t);
+				}
+				if(intrp == "CUBICSPLINE"){
+					// The number of output elements must equal three times the number of input elements.
+					// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_overview_2
+					// var ak0 = smp[ch_idx*3+0].output;
+					var vk0 = smp[ch_idx*3+1].output;
+					var bk0 = smp[ch_idx*3+1].output;
+					var ak1 = smp[(ch_idx+1)*3+0].output;
+					var vk1 = smp[(ch_idx+1)*3+1].output;
+					// var bk1 = smp[(ch_idx+1)*3+1].output;
+					val_at_t = vk0.copy();
+					for(vi in 0...val_at_t.length){
+						val_at_t[vi] = (2*t*t*t-3*t*t+1)*vk0[vi]
+							+td*(t*t*t-2*t*t+t)*bk0[vi]
+							+(-2.0*t*t*t+3.0*t*t)*vk1[vi]
+							+td*(t*t*t-t*t)*ak1[vi];
+					}
+				}
+				if(ch.path == "translation"){
+				}
+				if(ch.path == "rotation"){
+					Utils.quatNormalize(val_at_t, val_at_t);
+				}
+				if(ch.path == "scale"){
+				}
+			}
 		}
-		log(message);
-	}
-	public function log_e(message:String) {
-		if(gltf_load_warnings == null){
-			gltf_load_warnings = new Array<String>();
-		}
-		gltf_load_warnings.push(message);
-		log(message);
-	}
-	private static function log(str:String) {
-		trace("PFFScene: ", str);
+		return true;
 	}
 }

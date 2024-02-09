@@ -33,6 +33,7 @@ gLTF does not support non-TRS animation targets. So some extra efforts required 
 
 - [ ] Planned: Base64 in image URIs
 - [ ] Planned: GLB format
+- [ ] Planned: Optimization: avoid vector.copy during animation interpolations
 - [ ] Planned: Alpha-quality options per node
   - There is a problem with alpha fades over overlapping child - overlaps are visible on sub-images
   - Options: basic (per-sprite), push-to-childs (ok for simple hiers), filter-flattening (root sprite rendered offscreen with alpha 1.0 first)

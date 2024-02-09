@@ -2,6 +2,7 @@ package gltf.types;
 
 import haxe.ds.Vector;
 import gltf.schema.TAnimationChannelTargetPath;
+import gltf.schema.TAnimationInterpolation;
 import gltf.schema.TAnimationSampler;
 
 @:allow(gltf.types.AnimationChannel)
@@ -18,8 +19,10 @@ class AnimationSample {
 @:allow(gltf.types.Animation)
 class AnimationChannel {
     public var node(default, null):Node = null;
+    public var timestamps(default, null):Vector<Float> = null;
     public var samples(default, null):Vector<AnimationSample> = null;
     public var path(default, null):TAnimationChannelTargetPath = null;
+    public var interpolation(default, null):TAnimationInterpolation = null;
 
     private function new() {}
 
@@ -29,6 +32,12 @@ class AnimationChannel {
 
         var inputs:Vector<Float> = inputSampler.getFloats();
         var outputs:Vector<Float> = outputSampler.getFloats();
+        if(sampler.interpolation != null){
+            interpolation = sampler.interpolation;
+        }else{
+            interpolation = TAnimationInterpolation.LINEAR;
+        }
+        timestamps = inputs;
         samples = new Vector<AnimationSample>(inputs.length);
         for(i in 0...inputs.length) {
             samples[i] = new AnimationSample(

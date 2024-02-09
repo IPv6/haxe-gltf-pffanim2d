@@ -152,5 +152,8 @@ class Boot extends openfl.display.Sprite
 				gscene.activateComposition("ui2");
 			}
 		}, 3.0);
+		var allAnims = gscene.filterAnimsByName(["*"]);
+		// gscene.applyAnimations(allAnims, (0.0416666679084301+1.66666662693024)*0.5);
+		// gscene.applyAnimations([ allAnims[0] ], (0.0416666679084301+1.66666662693024)*0.5);
 	}
 }

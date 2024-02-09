@@ -19,42 +19,52 @@ typedef ArrayA = Array<Any>;
 typedef MapS2A = Map<String,Any>;
 // same as https://api.haxe.org/haxe/ds/index.html 'Either'... but Dynamic as a base
 abstract Either<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
+// Taken from https://github.com/HaxeFoundation/haxe/blob/4.3.3/std/haxe/ds/Vector.hx to detect Vector values
+private typedef VectorData<T> =
+	#if flash10
+	flash.Vector<T>
+	#elseif neko
+	neko.NativeArray<T>
+	#elseif cs
+	cs.NativeArray<T>
+	#elseif java
+	java.NativeArray<T>
+	#elseif lua
+	lua.Table<Int, T>
+	#elseif eval
+	eval.Vector<T>
+	#else
+	Array<T>
+	#end;
 
 class Utils {
 	private function new(){};
 
 	static public function safeLen(anything:Dynamic):Int {
 		var cnt : Int = 0;
-		if (anything == null )
-		{
+		if (anything == null){
 			return 0;
-		}
-		else if (Std.isOfType(anything, String))
-		{
+		}else if (Std.isOfType(anything, String)){
 			cnt = anything.length;
-		}
-		else if(Reflect.field(anything, "iterator") != null){// Iterables.isIterable(anything)
+		}else if (Std.isOfType(anything, VectorData)){// haxe.ds.Vector
+			cnt = anything.length;
+		}else if (Std.isOfType(anything, Array) || Std.isOfType(anything, List)){
+			cnt = anything.length;
+		}else if(Std.isOfType(anything,haxe.ds.StringMap)){
+			cnt = safeLen(anything.keys());
+		}else if(Reflect.field(anything, "iterator") != null){// Iterables.isIterable(anything)
 			cnt = 0;
 			var anything_any:Iterable<Dynamic> = cast anything;
 			for(field_val in anything_any){
 				cnt = cnt + 1;
 			}
-		}
-		else if(Reflect.field(anything, "hasNext") != null){// Iterators.isIterator(anything)
+		}else if(Reflect.field(anything, "hasNext") != null){// Iterators.isIterator(anything)
 			cnt = 0;
 			var anything_any:Iterator<Dynamic> = cast anything;
 			for(field_val in anything_any){
 				cnt = cnt + 1;
 			}
-		}else if(Std.isOfType(anything,haxe.ds.StringMap)){
-			cnt = safeLen(anything.keys());
-		}
-		else if (Std.isOfType(anything, Array) || Std.isOfType(anything, List))
-		{
-			cnt = anything.length;
-		}
-		else if (Std.isOfType(anything, Dynamic))
-		{
+		}else if (Std.isOfType(anything, Dynamic)){
 			for (prop in Reflect.fields(anything))
 			{
 				cnt++;
@@ -63,18 +73,28 @@ class Utils {
 		return cnt;
 	}
 
-	static public function xyz2xyzScaled(pos:Either<ArrayF,VectorF>, scale:Float = 1.0):ArrayF {
-		if(pos == null){
-			return [0.0,0.0,0.0];
+	static public function vec2vecScaled(a:Either<ArrayF,VectorF>, mult:Float, dest:VectorF):VectorF {
+		if(a == null){
+			a = new VectorF(3,0);
 		}
-		return [pos[0]*scale, pos[1]*scale, pos[2]*scale];
+		var a_len = safeLen(a);
+		for(vi in 0...a_len){
+			dest[vi] = a[vi] * mult;
+		}
+		return dest;
+	}
+	static public function vec2vecLerped(a:Either<ArrayF,VectorF>, b:VectorF, t:Float, dest:VectorF):VectorF {
+		var a_len = safeLen(a);
+		for(vi in 0...a_len){
+			dest[vi] = (1.0-t)*a[vi] + t*b[vi];
+		}
+		return dest;
 	}
 
-	static public function quaternion2euler(quat:Either<ArrayF,VectorF>):ArrayF {
+	static public var GLM_EPSILON:Float = 0.0000001;// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
+	static public function quat2euler(quat:Either<ArrayF,VectorF>):ArrayF {
 		// quat expected to be NORMALIZED
 		// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-		// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
-
 		if(quat == null){
 			return [0.0, 0.0, 0.0];
 		}
@@ -99,6 +119,59 @@ class Utils {
 		var yaw = Math.atan2(siny_cosp, cosy_cosp);
 	
 		return [roll, pitch, yaw];
+	}
+	public static function quatDot(a:VectorF, b:VectorF):Float {
+		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+	}
+	public static function quatLength(q:VectorF):Float {
+		var len_sq = quatDot(q,q); // q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3];
+		return Math.sqrt(len_sq);
+	}
+	public static function quatNormalize(q:VectorF, dest:VectorF):VectorF {
+		var length:Float = quatLength(q);
+		var mult:Float = 0;
+		if(length >= GLM_EPSILON) {
+			mult = 1 / length;
+		}
+		vec2vecScaled(q,mult,dest);
+		return dest;
+	}
+	public static function quatSlerp(a:VectorF, b:VectorF, t:Float, dest:VectorF):VectorF {
+		var bx:Float = b[0], by:Float = b[1], bz:Float = b[2], bw:Float = b[3];
+		var ax:Float = a[0], ay:Float = a[1], az:Float = a[2], aw:Float = a[3];
+
+		// calculate cosine
+		var cosTheta:Float = quatDot(a, b);
+
+		// if cosTheta < 0, the interpolation will go the long way around
+		// invert 
+		if(cosTheta < 0) {
+			cosTheta = -cosTheta;
+			bx = -bx;
+			by = -by;
+			bz = -bz;
+			bw = -bw;
+		}
+
+		// perform a linear interpolation when cosTheta is
+		// close to 1 to avoid side effect of sin(angle)
+		// becoming a zero denominator
+		if(cosTheta > 1 - GLM_EPSILON) {
+			vec2vecLerped(a,b,t,dest);
+			return dest;
+		}
+		else {
+			var angle:Float = Math.acos(cosTheta);
+			var sa:Float = 1 / Math.sin(angle);
+			var i:Float = Math.sin((1 - t) * angle);
+			var j:Float = Math.sin(t * angle);
+
+			dest[0] = (i * ax + j * bx) * sa;
+			dest[1] = (i * ay + j * by) * sa;
+			dest[2] = (i * az + j * bz) * sa;
+			dest[3] = (i * aw + j * bw) * sa;
+			return dest;
+		}
 	}
 
 	// openfl.utils.ByteArray -> haxe.io.Bytes
@@ -176,7 +249,7 @@ class Utils {
 		return result;
 	}
 
-	public static function strLimit(limitedStr : String, len : Int = 100, fromLeft : Bool = true, trimMark : String = "...") : String {
+	public static function strLimit(limitedStr: String, len: Int = 100, fromLeft: Bool = true, trimMark: String = "...") : String {
 		if (limitedStr == null) {
 			return "";
 		}
@@ -229,5 +302,38 @@ class Utils {
 			}
 		}
 		return -1;
+	}
+
+	// result = index of first value greater than the target.
+	// - target < values [result]
+	// = -1 if target > all values or values empty
+	static public function binarySearch(values:Either<ArrayF,VectorF>, target:Float):Int {
+		if(values == null){
+			return -1;
+		}
+		var v_len = safeLen(values);
+		if(v_len == 0 || target < values[0]){
+			return -1;
+		}
+		if(target >= values[v_len-1]){
+			if(target > values[v_len-1]){
+				return -1;
+			}
+			return v_len-1;
+		}
+		var low:Int = 0;
+		var high:Int = v_len - 2;
+		if (high == 0) return 1;
+		var current:Int = high >>> 1;
+		while (true) {
+			if (values[current + 1] <= target){
+				low = current + 1;
+			}else{
+				high = current;
+			}
+			if (low == high) return low + 1;
+			current = (low + high) >>> 1;
+		}
+		return -1; // Never
 	}
 }

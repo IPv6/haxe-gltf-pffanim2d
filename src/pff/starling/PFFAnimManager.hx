@@ -21,16 +21,6 @@ class PFFNodeProps {
 	}
 }
 
-class PFFAnimState {
-	public function new(){};
-	public var full_path:String = "";
-	public var gltf_id:Int = -1;
-	public var gltfTime:Float = 0.0;
-	public var gltfTimeMin:Float = 0.0;
-	public var gltfTimeMax:Float = 0.0;
-	public var infl:Float = 1.0;
-}
-
 class PFFAnimNode extends PFFNodeProps {
 	public function new(){super();};
 	public var sprite:starling.display.DisplayObject = null;// Sprite or Quad (clip mask)
@@ -46,6 +36,16 @@ class PFFAnimNode extends PFFNodeProps {
 	public var r_dirty:Int = 0;
 	public var a_dirty:Int = 0;
 	public var mask_dirty:Int = 0;
+}
+
+class PFFAnimState {
+	public function new(){};
+	public var full_path:String = "";
+	public var gltf_id:Int = -1;
+	public var gltfTime:Float = 0.0;
+	public var gltfTimeMin:Float = 0.0;
+	public var gltfTimeMax:Float = 0.0;
+	public var infl:Float = 1.0;
 }
 
 class PFFAnimManager implements IAnimatable {
