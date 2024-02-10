@@ -73,7 +73,7 @@ class Utils {
 		return cnt;
 	}
 
-	static public function vec2vecScaled(a:Either<ArrayF,VectorF>, mult:Float, dest:VectorF):VectorF {
+	static inline public function vec2vecScaled(a:Either<ArrayF,VectorF>, mult:Float, dest:VectorF):VectorF {
 		if(a == null){
 			a = new VectorF(3,0);
 		}
@@ -83,11 +83,15 @@ class Utils {
 		}
 		return dest;
 	}
-	static public function vec2vecLerped(a:Either<ArrayF,VectorF>, b:VectorF, t:Float, dest:VectorF):VectorF {
+	static inline public function vec2vecLerped(a:Either<ArrayF,VectorF>, b:VectorF, t:Float, dest:VectorF):VectorF {
 		var a_len = safeLen(a);
 		for(vi in 0...a_len){
 			dest[vi] = (1.0-t)*a[vi] + t*b[vi];
 		}
+		return dest;
+	}
+	static inline public function f2fLerped(a:Float, b:Float, t:Float):Float {
+		var dest = (1.0-t)*a + t*b;
 		return dest;
 	}
 
@@ -304,20 +308,22 @@ class Utils {
 		return -1;
 	}
 
-	// result = index of first value greater than the target.
-	// - target < values [result]
-	// = -1 if target > all values or values empty
+	// result = index of first value greater than the target (target < values[result])
+	// return -1/-2/-3 if: have no values, less than 2 value, target out of interval
 	static public function binarySearch(values:Either<ArrayF,VectorF>, target:Float):Int {
 		if(values == null){
 			return -1;
 		}
 		var v_len = safeLen(values);
-		if(v_len == 0 || target < values[0]){
+		if(v_len < 2){// At least TWO values needed
 			return -1;
+		}
+		if(target < values[0]){
+			return -2;
 		}
 		if(target >= values[v_len-1]){
 			if(target > values[v_len-1]){
-				return -1;
+				return -3;
 			}
 			return v_len-1;
 		}

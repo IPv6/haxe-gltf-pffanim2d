@@ -50,7 +50,8 @@ class PFFScene {
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
 	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];// px_x = loc[0], px_y = loc[2]
 	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
-	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask
+	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask. Can be "#pff:mask.001" (Blender specifics) as well, etc
+	var tmp_vec = new Utils.VectorF(3);
 
 	/** 
 	* Create all nodes and construct display list hierarchy. Assign gltf_root to root node of glft scene
@@ -111,7 +112,6 @@ class PFFScene {
 		kMetersXYZ_freeAxis = xyz_avail[0];
 		// First pass - Creating all nodes separately
 		nodes_list = [];
-		var tmp_vec = new Utils.VectorF(3);
 		for(nd in gltf_struct.nodes){
 			var name = nd.name;
 			var trs_location_px = Utils.vec2vecScaled(nd.translation, kMeters3D_to_Pixels2D_ratio, tmp_vec).toArray();
@@ -159,7 +159,7 @@ class PFFScene {
 			starling_node.customprops = customprops;
 			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis];
 			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
-			if(nd.name == kPffMask_nodename){
+			if(nd.name.indexOf(kPffMask_nodename) >= 0){
 				// Special case for kPffMask_nodename
 				if(bbox_px != null){
 					var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
@@ -202,7 +202,7 @@ class PFFScene {
 					var child_starling_node = nodes_list[child_id];
 					var child_gltf_node = gltf_struct.nodes[child_id];
 					child_starling_node.gltf_parent_id = starling_node.gltf_id;
-					if(child_gltf_node.name == kPffMask_nodename){
+					if(child_gltf_node.name.indexOf(kPffMask_nodename) >= 0){
 						// Special case: quad mask
 						trace("- adding MASK", node_sprite, child_starling_node.sprite);
 						if(child_starling_node.sprite != null){
@@ -564,65 +564,128 @@ class PFFScene {
 	* gltfTime: Blender-time to sample animation data
 	**/
 	public function applyAnimations(anims:Array<PFFAnimState>, gltfTime:Float): Bool {
+		// try{
+		var affectedNodes:Map<Int,PFFAnimNode> = new Map<Int,PFFAnimNode>();// Map with jey uniqness
 		for(anim in anims){
 			anim.gltfTime = gltfTime;
 			if(anim.infl < Utils.GLM_EPSILON){
 				continue;
 			}
 			var nd = gltf_struct.animations[anim.gltf_id];
+			var t = 0.0;
+			var td = 0.0;
 			for(ch in nd.channels){
 				// Looking gltfTime in ch.timestamps
+				var intrp:String = ch.interpolation;
 				var smp = ch.samples;
-				var ch_idx = Utils.binarySearch(ch.timestamps, gltfTime);
-				if(ch_idx<0){
+				var ch_idx = Utils.binarySearch(ch.timestamps, gltfTime);// ch_idx: ch.timestamps[ch_idx] > gltfTime
+				if(ch_idx == -1){
+					// If less that 2 timestamps - nothing to interpolate
 					continue;
 				}
-				var td = (ch.timestamps[ch_idx+1]-ch.timestamps[ch_idx]);
-				var t = (gltfTime-ch.timestamps[ch_idx])/td;
-				var intrp:String = ch.interpolation;
+				if(ch_idx == -2){
+					// Sticking to start
+					ch_idx = 1;
+					gltfTime = ch.timestamps[ch_idx-1];
+				}else if(ch_idx == -3){
+					// Sticking to end
+					ch_idx = ch.timestamps.length-1;
+					gltfTime = ch.timestamps[ch_idx];
+				}
+				td = (ch.timestamps[ch_idx]-ch.timestamps[ch_idx-1]);
+				t = (gltfTime-ch.timestamps[ch_idx-1])/td;
 				if(intrp == "LINEAR" && ch.path == "rotation"){
-					trace("!! switch to lerp");
 					intrp = "SLERP";
 				}
-				trace("- interpolating", anim.full_path, gltfTime, t, intrp);
+				// trace("- interpolating", anim.full_path, intrp, gltfTime, ch_idx, t);// haxe.Json.stringify(ch.timestamps)
 				// Getting interpolated vector
-				var val_at_t:Utils.VectorF = smp[ch_idx].output.copy();//  "STEP"
+				var val_at_t:Utils.VectorF = smp[ch_idx-1].output.copy();//  "STEP"
 				if(intrp == "LINEAR"){
-					var val_at_t2 = smp[ch_idx+1].output;
-					for(vi in 0...val_at_t.length){
-						val_at_t[vi] = (1.0-t)*val_at_t[vi] + t*val_at_t2[vi];
-					}
+					var val_at_t2 = smp[ch_idx].output;
+					Utils.vec2vecLerped(val_at_t, val_at_t2, t, val_at_t);
 				}
 				if(intrp == "SLERP"){
 					// When targeting a rotation, spherical linear interpolation (slerp) should be used to interpolate quaternions.
-					Utils.quatSlerp(smp[ch_idx].output, smp[ch_idx+1].output, t, val_at_t);
+					Utils.quatSlerp(smp[ch_idx-1].output, smp[ch_idx].output, t, val_at_t);
 				}
 				if(intrp == "CUBICSPLINE"){
 					// The number of output elements must equal three times the number of input elements.
 					// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_overview_2
-					// var ak0 = smp[ch_idx*3+0].output;
-					var vk0 = smp[ch_idx*3+1].output;
-					var bk0 = smp[ch_idx*3+1].output;
-					var ak1 = smp[(ch_idx+1)*3+0].output;
-					var vk1 = smp[(ch_idx+1)*3+1].output;
-					// var bk1 = smp[(ch_idx+1)*3+1].output;
+					var vk0 = smp[ch_idx-1].output;
+					var bk0 = smp[ch_idx-1].output_out;
+					var ak1 = smp[ch_idx].output_in;
+					var vk1 = smp[ch_idx].output;
 					val_at_t = vk0.copy();
+					var t2 = t*t;
+					var t3 = t2*t;
+					// trace("- CUBICSPLINE", vk0, vk1, val_at_t, val_at_t.length);
 					for(vi in 0...val_at_t.length){
-						val_at_t[vi] = (2*t*t*t-3*t*t+1)*vk0[vi]
-							+td*(t*t*t-2*t*t+t)*bk0[vi]
-							+(-2.0*t*t*t+3.0*t*t)*vk1[vi]
-							+td*(t*t*t-t*t)*ak1[vi];
+						val_at_t[vi] = (2.0*t3-3.0*t2+1)*vk0[vi]
+							+td*(t3-2*t2+t)*bk0[vi]
+							+(-2.0*t3+3.0*t2)*vk1[vi]
+							+td*(t3-t2)*ak1[vi];
 					}
 				}
+				var cn_node = nodes_list[ch.node.id];
+				affectedNodes[cn_node.gltf_id] = cn_node;
 				if(ch.path == "translation"){
+					var trs_location_px = Utils.vec2vecScaled(val_at_t, kMeters3D_to_Pixels2D_ratio, tmp_vec);
+					var trs_x = trs_location_px[kMetersXYZ_to_PixelsXY[0]];
+					var trs_y = trs_location_px[kMetersXYZ_to_PixelsXY[1]];
+					if(anim.infl < 1.0){
+						cn_node.x = Utils.f2fLerped(cn_node.x,trs_x,anim.infl);
+						cn_node.y = Utils.f2fLerped(cn_node.y,trs_y,anim.infl);
+					}else{
+						cn_node.x = trs_x;
+						cn_node.y = trs_y;
+					}
+					cn_node.xy_dirty++;
 				}
 				if(ch.path == "rotation"){
 					Utils.quatNormalize(val_at_t, val_at_t);
+					var trs_rotation_eulerXYZ = Utils.quat2euler(val_at_t);
+					var rotation:Float = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
+					if(anim.infl < 1.0){
+						cn_node.rotation = Utils.f2fLerped(cn_node.rotation,rotation,anim.infl);
+					}else{
+						cn_node.rotation = rotation;
+					}
+					cn_node.r_dirty++;
 				}
 				if(ch.path == "scale"){
+					var trs_scale = Utils.vec2vecScaled(val_at_t, 1.0, tmp_vec);
+					var trs_sx = trs_scale[kMetersXYZ_to_PixelsXY[0]];
+					var trs_sy = trs_scale[kMetersXYZ_to_PixelsXY[1]];
+					if(anim.infl < 1.0){
+						cn_node.scaleX = Utils.f2fLerped(cn_node.scaleX,trs_sx,anim.infl);
+						cn_node.scaleY = Utils.f2fLerped(cn_node.scaleY,trs_sx,anim.infl);
+					}else{
+						cn_node.scaleX = trs_sx;
+						cn_node.scaleY = trs_sy;
+					}
+					cn_node.sxsy_dirty++;
+					var alpha_self = trs_scale[kMetersXYZ_freeAxis];
+					if(alpha_self != cn_node.alpha_self){
+						if(anim.infl < 1.0){
+							cn_node.alpha_self = Utils.f2fLerped(cn_node.alpha_self,alpha_self,anim.infl);
+						}else{
+							cn_node.alpha_self = alpha_self;
+						}
+						cn_node.a_dirty++;
+					}
 				}
 			}
 		}
+		// Iterating over map calues
+		for(anim_nd in affectedNodes){
+			if(anim_nd.sprite == null){
+				continue;
+			}
+			Utils.undumpAnimSprite(anim_nd.sprite,anim_nd);
+		}
+		// }catch (e : Any) {
+		// 	trace('Anim exception: ${e}');
+		// }
 		return true;
 	}
 }

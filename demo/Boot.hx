@@ -153,7 +153,12 @@ class Boot extends openfl.display.Sprite
 			}
 		}, 3.0);
 		var allAnims = gscene.filterAnimsByName(["*"]);
-		// gscene.applyAnimations(allAnims, (0.0416666679084301+1.66666662693024)*0.5);
+		var animTime = 0.0;
 		// gscene.applyAnimations([ allAnims[0] ], (0.0416666679084301+1.66666662693024)*0.5);
+		Starling.current.juggler.repeatCall(()-> {
+			gscene.applyAnimations(allAnims, animTime);
+			// gscene.applyAnimations([ allAnims[0] ], animTime);
+			animTime = (animTime+0.03)%2.0;
+		}, 0.1);
 	}
 }

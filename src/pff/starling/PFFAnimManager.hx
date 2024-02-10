@@ -35,7 +35,6 @@ class PFFAnimNode extends PFFNodeProps {
 	public var sxsy_dirty:Int = 0;
 	public var r_dirty:Int = 0;
 	public var a_dirty:Int = 0;
-	public var mask_dirty:Int = 0;
 }
 
 class PFFAnimState {
