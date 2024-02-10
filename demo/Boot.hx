@@ -104,13 +104,17 @@ class Boot extends openfl.display.Sprite
 		// _root.addChild(bg_img);
 
 		// GLTF MENUTEST
-		var asset_obj = _assets.getObject("root.gltf");
+		var asset_obj = _assets.getObject("test_scene_anims.gltf");
 		// var asset_ba = _assets.getByteArray("root.gltf");
 		// var asset_raw:String = asset_ba.readUTFBytes(asset_ba.length);
 		var gltf_res:Utils.MapS2A = new Utils.MapS2A();
 		gltf_res["root"] = asset_obj;
 		var ext_list = PFFScene.extractExternalResources( "root", gltf_res );
 		trace("- resources required by gLTF", ext_list);
+		if(ext_list == null){
+			trace("- gltf file missing");
+			return;
+		}
 		for(res_path in ext_list){
 			var asset_tex = _assets.getTexture(res_path);
 			if(asset_tex != null){
@@ -152,12 +156,13 @@ class Boot extends openfl.display.Sprite
 				gscene.activateComposition("ui2");
 			}
 		}, 3.0);
+		// var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
+		// var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
+		// var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
 		var allAnims = gscene.filterAnimsByName(["*"]);
 		var animTime = 0.0;
-		// gscene.applyAnimations([ allAnims[0] ], (0.0416666679084301+1.66666662693024)*0.5);
 		Starling.current.juggler.repeatCall(()-> {
 			gscene.applyAnimations(allAnims, animTime);
-			// gscene.applyAnimations([ allAnims[0] ], animTime);
 			animTime = (animTime+0.03)%2.0;
 		}, 0.1);
 	}

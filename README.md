@@ -11,6 +11,7 @@
 # Blender setup details
 - Recognizable objects: Empties for grouping and simple Mesh objects (quad, 4-vert plane) for starling sprites
 - Empties && Quads must be arranged in Blender XY-plane (for top-down view)
+  - In world coords, root empty should not have any rotations/scales
 - Quads may have unlit textures - quad material image applied as Texture for corresponding starling node (by default)
 - Quad can have axis-aligned offset from object origin - offset converted to Sprite pivot (by default)
 - Quad/Empty can have custom props - they are loaded and can be used for customizing starling node creation
@@ -19,7 +20,7 @@
   - Export name will be the name of the action in both cases
 - Animations: Actions must always have frame 0 keyed
   - gLTF 'Actions' exporter resets any timeline offset anyway
-- Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
+- Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up: Off`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
 
 # Alpha && Clipping animation conventions
 

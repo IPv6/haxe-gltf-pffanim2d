@@ -83,7 +83,7 @@ class Utils {
 		}
 		return dest;
 	}
-	static inline public function vec2vecLerped(a:Either<ArrayF,VectorF>, b:VectorF, t:Float, dest:VectorF):VectorF {
+	static inline public function vec2vecLerped(a:Either<ArrayF,VectorF>, b:Either<ArrayF,VectorF>, t:Float, dest:VectorF):VectorF {
 		var a_len = safeLen(a);
 		for(vi in 0...a_len){
 			dest[vi] = (1.0-t)*a[vi] + t*b[vi];
@@ -97,7 +97,7 @@ class Utils {
 
 	static public var GLM_EPSILON:Float = 0.0000001;// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
 	static public function quat2euler(quat:Either<ArrayF,VectorF>):ArrayF {
-		// quat expected to be NORMALIZED
+		// Expected to return COPY. Quat expected to be NORMALIZED.
 		// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 		if(quat == null){
 			return [0.0, 0.0, 0.0];
@@ -141,12 +141,15 @@ class Utils {
 		return dest;
 	}
 	public static function quatSlerp(a:VectorF, b:VectorF, t:Float, dest:VectorF):VectorF {
-		var bx:Float = b[0], by:Float = b[1], bz:Float = b[2], bw:Float = b[3];
-		var ax:Float = a[0], ay:Float = a[1], az:Float = a[2], aw:Float = a[3];
-
 		// calculate cosine
 		var cosTheta:Float = quatDot(a, b);
-
+		// if(shortWay && cosTheta<0){
+		// 	// https://discussions.unity.com/t/not-interpolate-quaternion-on-shortest-path/73960/3
+		// 	vec2vecScaled(a,-1,dest);
+		// 	return quatSlerp(dest,b,t,dest,false);
+		// }
+		var bx:Float = b[0], by:Float = b[1], bz:Float = b[2], bw:Float = b[3];
+		var ax:Float = a[0], ay:Float = a[1], az:Float = a[2], aw:Float = a[3];
 		// if cosTheta < 0, the interpolation will go the long way around
 		// invert 
 		if(cosTheta < 0) {
@@ -234,7 +237,7 @@ class Utils {
 			spr.scaleX = props.scaleX;
 			spr.scaleY = props.scaleY;
 		}
-		if(props.rotation > 0){
+		if(props.r_dirty > 0){
 			spr.rotation = props.rotation;
 		}
 	}
