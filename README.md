@@ -50,7 +50,7 @@ gLTF does not support non-TRS animation targets. So some extra efforts required 
 haxelib install openfl
 haxelib install starling
 cd ./demo
-openfl test <win/mac/...>
+openfl test <windows/mac>
 ```
 
 - Demo using resources from https://opengameart.org/content/free-game-gui
