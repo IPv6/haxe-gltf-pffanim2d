@@ -168,11 +168,7 @@ class Boot extends openfl.display.Sprite
 		var allAnims = gscene.filterAnimsByName(["*"]);
 		var allAnimStates:Array<PFFAnimState> = [];
 		for (an in allAnims){
-			var ans:PFFAnimState = {
-				anim: an,
-				infl: 1.0,
-				gltfTime: 0.0,
-			}
+			var ans:PFFAnimState = new PFFAnimState(an, 0, 1);
 			allAnimStates.push(ans);
 		}
 		var animTime = 0.0;

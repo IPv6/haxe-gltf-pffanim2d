@@ -507,7 +507,7 @@ class PFFScene {
 				if(spr.sprite != null){
 					spr.sprite.visible = false;
 				}
-				spr.visible = false;
+				spr.props.visible = false;
 				spr.a_dirty++;
 			}
 		}
@@ -516,7 +516,7 @@ class PFFScene {
 				if(spr.sprite != null){
 					spr.sprite.visible = true;
 				}
-				spr.visible = true;
+				spr.props.visible = true;
 				spr.a_dirty++;
 			}
 		}
@@ -589,7 +589,7 @@ class PFFScene {
 		// try{
 		var affectedNodes:Map<Int,PFFNodeState> = new Map<Int,PFFNodeState>();// Map with jey uniqness
 		for(ans in anims){
-			var infl = ans.infl;
+			var infl = ans.influence;
 			if(infl < Utils.GLM_EPSILON){
 				continue;
 			}
@@ -694,11 +694,11 @@ class PFFScene {
 					var trs_x = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_PixelsXY_scale[0];
 					var trs_y = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_PixelsXY_scale[1];
 					if(infl < 1.0){
-						cn_node.x = Utils.f2fLerped(cn_node.x,trs_x,infl);
-						cn_node.y = Utils.f2fLerped(cn_node.y,trs_y,infl);
+						cn_node.props.x = Utils.f2fLerped(cn_node.props.x,trs_x,infl);
+						cn_node.props.y = Utils.f2fLerped(cn_node.props.y,trs_y,infl);
 					}else{
-						cn_node.x = trs_x;
-						cn_node.y = trs_y;
+						cn_node.props.x = trs_x;
+						cn_node.props.y = trs_y;
 					}
 					cn_node.xy_dirty++;
 				}
@@ -713,9 +713,9 @@ class PFFScene {
 					var trs_rotation_eulerXYZ = Utils.quat2euler(tmp_quat);
 					rotation = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 					if(infl < 1.0){
-						cn_node.rotation = Utils.f2fLerped(cn_node.rotation,rotation,infl);
+						cn_node.props.rotation = Utils.f2fLerped(cn_node.props.rotation,rotation,infl);
 					}else{
-						cn_node.rotation = rotation;
+						cn_node.props.rotation = rotation;
 					}
 					cn_node.r_dirty++;
 				}
@@ -724,19 +724,19 @@ class PFFScene {
 					var trs_sx = trs_scale[kMetersXYZ_to_PixelsXY[0]];
 					var trs_sy = trs_scale[kMetersXYZ_to_PixelsXY[1]];
 					if(infl < 1.0){
-						cn_node.scaleX = Utils.f2fLerped(cn_node.scaleX,trs_sx,infl);
-						cn_node.scaleY = Utils.f2fLerped(cn_node.scaleY,trs_sx,infl);
+						cn_node.props.scaleX = Utils.f2fLerped(cn_node.props.scaleX,trs_sx,infl);
+						cn_node.props.scaleY = Utils.f2fLerped(cn_node.props.scaleY,trs_sx,infl);
 					}else{
-						cn_node.scaleX = trs_sx;
-						cn_node.scaleY = trs_sy;
+						cn_node.props.scaleX = trs_sx;
+						cn_node.props.scaleY = trs_sy;
 					}
 					cn_node.sxsy_dirty++;
 					var alpha_self = trs_scale[kMetersXYZ_freeAxis];
-					if(alpha_self != cn_node.alpha_self){
+					if(alpha_self != cn_node.props.alpha_self){
 						if(infl < 1.0){
-							cn_node.alpha_self = Utils.f2fLerped(cn_node.alpha_self,alpha_self,infl);
+							cn_node.props.alpha_self = Utils.f2fLerped(cn_node.props.alpha_self,alpha_self,infl);
 						}else{
-							cn_node.alpha_self = alpha_self;
+							cn_node.props.alpha_self = alpha_self;
 						}
 						cn_node.a_dirty++;
 					}

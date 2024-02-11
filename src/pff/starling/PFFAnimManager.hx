@@ -41,6 +41,9 @@ class PFFNodeState {
 	public var sxsy_dirty:Int = 0;
 	public var r_dirty:Int = 0;
 	public var a_dirty:Int = 0;
+	public function toString():String {
+		return this?.props.toString();
+	}
 }
 
 class PFFAnimProps {
@@ -53,10 +56,12 @@ class PFFAnimProps {
 }
 
 class PFFAnimState {
-	public function new(){};
+	public function new(a:PFFAnimProps, t:Float, i:Float){
+		anim = a;gltfTime=t;influence=i;
+	};
 	public var anim:PFFAnimProps = null;
 	public var gltfTime:Float = 0.0;
-	public var infl:Float = 0.0;
+	public var influence:Float = 0.0;
 }
 
 /**

@@ -36,11 +36,7 @@ class PFFTimeline {
 	public function setAnims(anims:Array<PFFAnimProps>): Bool {
 		var animStates:Array<PFFAnimState> = [];
 		for (an in anims){
-			var ans:PFFAnimState = {
-				anim: an,
-				infl: 1.0,
-				gltfTime: timeCurrent,
-			}
+			var ans:PFFAnimState = new PFFAnimState(an, timeCurrent, 1);
 			animStates.push(ans);
 		}
 		this.anims = animStates;
