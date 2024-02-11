@@ -22,7 +22,6 @@ class AnimationSample {
 @:allow(gltf.types.Animation)
 class AnimationChannel {
     public var node(default, null):Node = null;
-    public var timestamps(default, null):Vector<Float> = null;
     public var samples(default, null):Vector<AnimationSample> = null;
     public var path(default, null):TAnimationChannelTargetPath = null;
     public var interpolation(default, null):TAnimationInterpolation = null;
@@ -79,7 +78,6 @@ class AnimationChannel {
         }else{
             interpolation = TAnimationInterpolation.LINEAR;
         }
-        timestamps = inputs;
         samples = new Vector<AnimationSample>(inputs.length);
         for(i in 0...inputs.length) {
             if(interpolation == TAnimationInterpolation.CUBICSPLINE){

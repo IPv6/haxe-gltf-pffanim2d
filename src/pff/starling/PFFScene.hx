@@ -277,8 +277,11 @@ class PFFScene {
 				anim_state.gltf_id = i;
 				anim_state.gltfTimeMin = -1;
 				anim_state.gltfTimeMax = -1;
+				anim_state.timestamps = [];
 				for(ch in nd.channels){
+					var ch_stamps:Utils.ArrayF = [];
 					for(smp in ch.samples){
+						ch_stamps.push(smp.input);
 						if(anim_state.gltfTimeMin < 0 || anim_state.gltfTimeMax < 0){
 							anim_state.gltfTimeMin = smp.input;
 							anim_state.gltfTimeMax = smp.input;
@@ -287,6 +290,7 @@ class PFFScene {
 						anim_state.gltfTimeMin = Math.min(anim_state.gltfTimeMin,smp.input);
 						anim_state.gltfTimeMax = Math.max(anim_state.gltfTimeMax,smp.input);
 					}
+					anim_state.timestamps.push(ch_stamps);
 				}
 				// trace("- loaded anim", anim_state.full_path, anim_state.gltfTimeMin, anim_state.gltfTimeMax);
 				animstates_list.push(anim_state);
@@ -588,11 +592,13 @@ class PFFScene {
 			var nd = gltf_struct.animations[anim.gltf_id];
 			var t = 0.0;
 			var td = 0.0;
-			for(ch in nd.channels){
-				// Looking gltfTime in ch.timestamps
+			for(i_ch in 0... nd.channels.length){
+				// Looking gltfTime in timestamps
+				var ch = nd.channels[i_ch];
+				var ch_timestamps = anim.timestamps[i_ch];
 				var intrp:String = ch.interpolation;
 				var smp = ch.samples;
-				var ch_idx = Utils.binarySearch(ch.timestamps, gltfTime);// ch_idx: ch.timestamps[ch_idx] > gltfTime
+				var ch_idx = Utils.binarySearch(ch_timestamps, gltfTime);// ch_idx: ch_timestamps[ch_idx] > gltfTime
 				if(ch_idx == -1){
 					// If less that 2 timestamps - nothing to interpolate
 					continue;
@@ -600,20 +606,20 @@ class PFFScene {
 				if(ch_idx == -2){
 					// trace("// Sticking to start");
 					ch_idx = 1;
-					gltfTime = ch.timestamps[ch_idx-1];
+					gltfTime = ch_timestamps[ch_idx-1];
 				}else if(ch_idx == -3){
 					// trace("// Sticking to end");
-					ch_idx = ch.timestamps.length-1;
-					gltfTime = ch.timestamps[ch_idx];
+					ch_idx = ch_timestamps.length-1;
+					gltfTime = ch_timestamps[ch_idx];
 				}
-				td = (ch.timestamps[ch_idx]-ch.timestamps[ch_idx-1]);
-				t = (gltfTime-ch.timestamps[ch_idx-1])/td;
+				td = (ch_timestamps[ch_idx]-ch_timestamps[ch_idx-1]);
+				t = (gltfTime-ch_timestamps[ch_idx-1])/td;
 				if(ch.path == "rotation" && (intrp == "LINEAR" || intrp == "CUBICSPLINE")){
 					// Proper handling of 0 <-> 2PI rotations. Even for CUBICSPLINE
 					intrp = "rot_SLERP";
 					// intrp = "rot_EULER";
 				}
-				// trace("- interpolating", anim.full_path,ch.path,intrp, gltfTime, ch_idx, t);// haxe.Json.stringify(ch.timestamps)
+				// trace("- interpolating", anim.full_path,ch.path,intrp, gltfTime, ch_idx, t);// haxe.Json.stringify(ch_timestamps)
 				// Getting interpolated vector
 				var val_at_t:Utils.VectorF = null;
 				if(intrp == "LINEAR"){
@@ -639,8 +645,14 @@ class PFFScene {
 				}else if(intrp == "rot_SLERP"){
 					// When targeting a rotation, spherical linear interpolation (slerp) should be used to interpolate quaternions.
 					val_at_t = Utils.quatSlerp(smp[ch_idx-1].output, smp[ch_idx].output, t, tmp_quat);
-				}else{// "STEP"/unknown
-					val_at_t = smp[ch_idx-1].output.copy();
+				}else{
+					// "STEP"/unknown
+					// Copy not needed
+					if(t < 1.0-Utils.GLM_EPSILON){
+						val_at_t = smp[ch_idx-1].output;
+					}else{
+						val_at_t = smp[ch_idx].output;
+					}
 				}
 				// else if(intrp == "rot_EULER"){
 				// 	var vk0 = smp[ch_idx-1].output;
@@ -668,6 +680,7 @@ class PFFScene {
 				// 	trace("//", haxe.Json.stringify(vk0), haxe.Json.stringify(vk1));
 				// 	Utils.vec2vecLerped(eulerXYZ0, eulerXYZ1, t, val_at_t);
 				// }
+				// val_at_t should not be modified, can be original vector...
 				var cn_node = nodes_list[ch.node.id];
 				affectedNodes[cn_node.gltf_id] = cn_node;
 				if(ch.path == "translation"){
@@ -690,8 +703,8 @@ class PFFScene {
 					// 	rotation = -1 * val_at_t[kMetersXYZ_freeAxis];
 					// }else{
 					// val_at_t = Regular quat
-					Utils.quatNormalize(val_at_t, val_at_t);
-					var trs_rotation_eulerXYZ = Utils.quat2euler(val_at_t);
+					Utils.quatNormalize(val_at_t, tmp_quat);
+					var trs_rotation_eulerXYZ = Utils.quat2euler(tmp_quat);
 					rotation = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 					if(anim.infl < 1.0){
 						cn_node.rotation = Utils.f2fLerped(cn_node.rotation,rotation,anim.infl);

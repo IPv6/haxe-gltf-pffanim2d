@@ -45,6 +45,7 @@ class PFFAnimState {
 	public var gltfTimeMin:Float = 0.0;
 	public var gltfTimeMax:Float = 0.0;
 	public var infl:Float = 1.0;
+	public var timestamps:Array< Array<Float> > = null;
 }
 
 class PFFAnimManager implements IAnimatable {
