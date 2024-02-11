@@ -1,7 +1,7 @@
 package pff.starling;
 
 import pff.starling.PFFAnimManager.PFFNodeProps;
-import pff.starling.PFFAnimManager.PFFAnimNode;
+import pff.starling.PFFAnimManager.PFFNodeState;
 
 import haxe.io.Bytes;
 import haxe.ds.Vector;
@@ -221,7 +221,7 @@ class Utils {
 		spr.rotation = props.rotation;
 	}
 
-	static public function undumpAnimSprite(spr:DisplayObject, props:PFFAnimNode):Void {
+	static public function undumpAnimSprite(spr:DisplayObject, props:PFFNodeState):Void {
 		if(props.a_dirty > 0){
 			spr.visible = props.visible;
 			// spr.alpha = props.alpha_self*props.alpha_mask;

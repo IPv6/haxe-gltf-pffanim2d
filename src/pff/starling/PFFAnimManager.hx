@@ -26,7 +26,7 @@ class PFFNodeProps {
 	}
 }
 
-class PFFAnimNode extends PFFNodeProps {
+class PFFNodeState extends PFFNodeProps {
 	public function new(){super();};
 	public var sprite:starling.display.DisplayObject = null;// Sprite or Quad (clip mask)
 	public var gltf_id:Int = -1;
@@ -42,7 +42,7 @@ class PFFAnimNode extends PFFNodeProps {
 	public var a_dirty:Int = 0;
 }
 
-class PFFAnimState {
+class PFFAnimProps {
 	public function new(){};
 	public var full_path:String = "";
 	public var gltf_id:Int = -1;
@@ -51,8 +51,10 @@ class PFFAnimState {
 	public var timestamps:Array< Array<Float> > = null;
 }
 
-class PFFAnimStateInst extend PFFAnimState {
-	public var infl:Float = 1.0;
+typedef PFFAnimState = {
+	anim:PFFAnimProps,
+	gltfTime:Float,
+	infl:Float,
 }
 
 /**
@@ -69,7 +71,7 @@ class PFFAnimManager implements IAnimatable {
 	public function new(pffsc:PFFScene){
 		scene = pffsc;
 	};
-	public function playAnimsByName(names:Utils.ArrayS, atNrmTime:Float, withTimeline:PFFTimeline):Bool {
+	public function playAnimsByName(names:Utils.ArrayS, withTimeline:PFFTimeline):Bool {
 		var anims = scene.filterAnimsByName(names,false);
 		if(anims.length == 0){
 			// no anims found, but probably just compositions
@@ -81,10 +83,11 @@ class PFFAnimManager implements IAnimatable {
 			}
 			return compos>0;
 		}
-		withTimeline.anims = anims;
-		return playTimeline(withTimeline, atNrmTime);
+		withTimeline.setAnims(anims);
+		// ??? Inits???
+		return playTimeline(withTimeline);
 	}
-	public function playTimeline(timeline:PFFTimeline, atNrmTime:Float):Bool {
+	public function playTimeline(timeline:PFFTimeline):Bool {
 		if(Utils.safeLen(timeline?.anims) == 0){
 			// Timeline have no content
 			return false;

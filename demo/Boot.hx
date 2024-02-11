@@ -9,6 +9,10 @@ import haxe.io.*;
 
 import gltf.*;
 import pff.starling.*;
+import pff.starling.PFFAnimManager.PFFNodeProps;
+import pff.starling.PFFAnimManager.PFFNodeState;
+import pff.starling.PFFAnimManager.PFFAnimProps;
+import pff.starling.PFFAnimManager.PFFAnimState;
 import openfl.utils.Assets;
 
 import starling.core.*;
@@ -161,14 +165,26 @@ class Boot extends openfl.display.Sprite
 		// // var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
 		// // var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
 		// // var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
-		// var allAnims = gscene.filterAnimsByName(["*"]);
-		// var animTime = 0.0;
-		// Starling.current.juggler.repeatCall(()-> {
-		// 	gscene.applyAnimations(allAnims, animTime);
-		// 	animTime = (animTime+0.03)%2.0;
-		// }, 0.1);
+		var allAnims = gscene.filterAnimsByName(["*"]);
+		var allAnimStates:Array<PFFAnimState> = [];
+		for (an in allAnims){
+			var ans:PFFAnimState = {
+				anim: an,
+				infl: 1.0,
+				gltfTime: 0.0,
+			}
+			allAnimStates.push(ans);
+		}
+		var animTime = 0.0;
+		Starling.current.juggler.repeatCall(()-> {
+			for (ans in allAnimStates){
+				ans.gltfTime = animTime;
+			}
+			gscene.applyAnimations(allAnimStates);
+			animTime = (animTime+0.03)%2.0;
+		}, 0.1);
 		// Test: animation manager with meta-timeline
-		var anims = new PFFAnimManager(gscene);
+		// var anims = new PFFAnimManager(gscene);
 		
 	}
 }

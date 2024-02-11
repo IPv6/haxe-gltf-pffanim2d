@@ -2,7 +2,8 @@ package pff.starling;
 
 import gltf.*;
 import pff.starling.PFFAnimManager.PFFNodeProps;
-import pff.starling.PFFAnimManager.PFFAnimNode;
+import pff.starling.PFFAnimManager.PFFNodeState;
+import pff.starling.PFFAnimManager.PFFAnimProps;
 import pff.starling.PFFAnimManager.PFFAnimState;
 import haxe.io.Bytes;
 import haxe.crypto.Base64;
@@ -34,9 +35,9 @@ class PFFScene {
 	// first node with NO PARENTS
 	public var gltf_root: DisplayObjectContainer = null;
 	// Plain list of Starling objects (same order as gLTF nodes order)
-	public var nodes_list: Array<PFFAnimNode> = null;
+	public var nodes_list: Array<PFFNodeState> = null;
 	// Plain list of Animation states (same order as gLTF animations order)
-	public var animstates_list: Array<PFFAnimState> = null;
+	public var animstates_list: Array<PFFAnimProps> = null;
 	// Blender`s custom props from scene root node
 	// Caller may overload some fields before loading gltf (to customize node creation, etc)
 	public var nodes_rootprops: Utils.MapS2A = new Utils.MapS2A();
@@ -159,7 +160,7 @@ class PFFScene {
 				}
 			}
 			var customprops = nd.extras;
-			var starling_node = new PFFAnimNode();
+			var starling_node = new PFFNodeState();
 			starling_node.full_path = nd.name;// Basic default, no hier
 			starling_node.gltf_id = nd.id;
 			starling_node.customprops = customprops;
@@ -272,7 +273,7 @@ class PFFScene {
 		if(gltf_struct.animations != null){
 			for(i in 0...(gltf_struct.animations.length)){
 				var nd = gltf_struct.animations[i];
-				var anim_state:PFFAnimState = new PFFAnimState();
+				var anim_state:PFFAnimProps = new PFFAnimProps();
 				anim_state.full_path = nd.name;
 				anim_state.gltf_id = i;
 				anim_state.gltfTimeMin = -1;
@@ -377,7 +378,7 @@ class PFFScene {
 	* Starling node generator. Can be overloaded to customazi starling sprite creation process
 	* For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	**/
-	public function fillStarlingNode(starling_node:PFFAnimNode, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
+	public function fillStarlingNode(starling_node:PFFNodeState, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
@@ -472,8 +473,8 @@ class PFFScene {
 	**/
 	public function addComposition(composition_name:String, show_set:Utils.ArrayS, hide_set:Utils.ArrayS):Void
 	{
-		var spr_on:Array<PFFAnimNode> = filterNodesByPath(show_set, true);
-		var spr_off:Array<PFFAnimNode> = filterNodesByPath(hide_set, true);
+		var spr_on:Array<PFFNodeState> = filterNodesByPath(show_set, true);
+		var spr_off:Array<PFFNodeState> = filterNodesByPath(hide_set, true);
 		nodes_compositions[composition_name] = [spr_on, spr_off];
 		return;
 	}
@@ -487,8 +488,8 @@ class PFFScene {
 		if(vis_rules == null){
 			return false;
 		}
-		var spr_on:Array<PFFAnimNode> = vis_rules[0];
-		var spr_off:Array<PFFAnimNode> = vis_rules[1];
+		var spr_on:Array<PFFNodeState> = vis_rules[0];
+		var spr_off:Array<PFFNodeState> = vis_rules[1];
 		log_i('activating composition: ${composition_name}');
 		makeCompositionActive(composition_name, spr_on, spr_off);
 		return true;
@@ -497,7 +498,7 @@ class PFFScene {
 	/**
 	* Can be overloaded to implement separate visibility change logic (fades/effect/etc)
 	**/
-	public function makeCompositionActive(composition_name:String, spritesToEnable:Array<PFFAnimNode>, spritesToDisable:Array<PFFAnimNode>):Void {
+	public function makeCompositionActive(composition_name:String, spritesToEnable:Array<PFFNodeState>, spritesToDisable:Array<PFFNodeState>):Void {
 		if(spritesToDisable != null){
 			for(spr in spritesToDisable){
 				if(spr.sprite != null){
@@ -518,8 +519,8 @@ class PFFScene {
 		}
 	}
 
-	public function filterNodesByPath(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimNode> {
-		var res:Array<PFFAnimNode> = [];
+	public function filterNodesByPath(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFNodeState> {
+		var res:Array<PFFNodeState> = [];
 		if(Utils.safeLen(full_paths) == 0){
 			return res;
 		}
@@ -556,8 +557,8 @@ class PFFScene {
 	}
 
 	// ===============
-	public function filterAnimsByName(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimState> {
-		var res:Array<PFFAnimState> = [];
+	public function filterAnimsByName(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimProps> {
+		var res:Array<PFFAnimProps> = [];
 		if(Utils.safeLen(full_paths) == 0 || gltf_struct == null || gltf_struct.animations == null){
 			return res;
 		}
@@ -581,14 +582,16 @@ class PFFScene {
 	* anims: animations to apply, like "NLA Stack". Can be queried by filterAnimsByName
 	* gltfTime: Blender-time to sample animation data
 	**/
-	public function applyAnimations(anims:Array<PFFAnimState>, gltfTime:Float): Bool {
+	public function applyAnimations(anims:Array<PFFAnimState>): Bool {
 		// try{
-		var affectedNodes:Map<Int,PFFAnimNode> = new Map<Int,PFFAnimNode>();// Map with jey uniqness
-		for(anim in anims){
-			var infl = anim.infl;
+		var affectedNodes:Map<Int,PFFNodeState> = new Map<Int,PFFNodeState>();// Map with jey uniqness
+		for(ans in anims){
+			var infl = ans.infl;
 			if(infl < Utils.GLM_EPSILON){
 				continue;
 			}
+			var anim = ans.anim;
+			var gltfTime = ans.gltfTime;
 			var nd = gltf_struct.animations[anim.gltf_id];
 			var t = 0.0;
 			var td = 0.0;
