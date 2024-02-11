@@ -91,7 +91,6 @@ class PFFAnimManager implements IAnimatable {
 			return compos>0;
 		}
 		withTimeline.setAnims(anims);
-		// ??? Inits???
 		return playTimeline(withTimeline);
 	}
 	public function playTimeline(timeline:PFFTimeline):Bool {
@@ -105,11 +104,27 @@ class PFFAnimManager implements IAnimatable {
 		return true;
 	}
 	public function findTimeline(tname:String): PFFTimeline {
+		for(ts in timelines){
+			if(ts.name == tname){
+				return ts;
+			}
+		}
 		return null;
 	}
-	public function advanceTime(time:Float):Void {
-		var activeTimelines = 0;
-		if(activeTimelines == 0 && juggler_id >= 0){
+	public function advanceTime(delta_sec:Float):Void {
+		var activeAnims:Array<PFFAnimState> = [];
+		for(ts in timelines){
+			ts.advanceTime(delta_sec);
+			if(ts.isActive()){
+				for(an in ts.anims){
+					activeAnims.push(an);
+				}
+			}
+		}
+		if(activeAnims.length > 0){
+			scene.applyAnimations(activeAnims);
+		}else if(juggler_id >= 0){
+			trace("stopping animMan");
 			Starling.current.juggler.removeByID(juggler_id);
 			juggler_id = -1;
 		}

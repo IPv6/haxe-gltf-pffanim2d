@@ -95,7 +95,8 @@ class Utils {
 		return dest;
 	}
 
-	static public var GLM_EPSILON:Float = 0.0000001;// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
+	// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
+	static public var GLM_EPSILON:Float = 0.0000001;
 	static public function quat2euler(quat:Either<ArrayF,VectorF>):ArrayF {
 		// Expected to return COPY. Quat expected to be NORMALIZED.
 		// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
