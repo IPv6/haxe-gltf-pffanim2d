@@ -585,8 +585,8 @@ class PFFScene {
 		// try{
 		var affectedNodes:Map<Int,PFFAnimNode> = new Map<Int,PFFAnimNode>();// Map with jey uniqness
 		for(anim in anims){
-			anim.gltfTime = gltfTime;
-			if(anim.infl < Utils.GLM_EPSILON){
+			var infl = anim.infl;
+			if(infl < Utils.GLM_EPSILON){
 				continue;
 			}
 			var nd = gltf_struct.animations[anim.gltf_id];
@@ -687,9 +687,9 @@ class PFFScene {
 					var trs_location_px = Utils.vec2vecScaled(val_at_t, kMeters3D_to_Pixels2D_ratio, tmp_vec);
 					var trs_x = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_PixelsXY_scale[0];
 					var trs_y = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_PixelsXY_scale[1];
-					if(anim.infl < 1.0){
-						cn_node.x = Utils.f2fLerped(cn_node.x,trs_x,anim.infl);
-						cn_node.y = Utils.f2fLerped(cn_node.y,trs_y,anim.infl);
+					if(infl < 1.0){
+						cn_node.x = Utils.f2fLerped(cn_node.x,trs_x,infl);
+						cn_node.y = Utils.f2fLerped(cn_node.y,trs_y,infl);
 					}else{
 						cn_node.x = trs_x;
 						cn_node.y = trs_y;
@@ -706,8 +706,8 @@ class PFFScene {
 					Utils.quatNormalize(val_at_t, tmp_quat);
 					var trs_rotation_eulerXYZ = Utils.quat2euler(tmp_quat);
 					rotation = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
-					if(anim.infl < 1.0){
-						cn_node.rotation = Utils.f2fLerped(cn_node.rotation,rotation,anim.infl);
+					if(infl < 1.0){
+						cn_node.rotation = Utils.f2fLerped(cn_node.rotation,rotation,infl);
 					}else{
 						cn_node.rotation = rotation;
 					}
@@ -717,9 +717,9 @@ class PFFScene {
 					var trs_scale = Utils.vec2vecScaled(val_at_t, 1.0, tmp_vec);
 					var trs_sx = trs_scale[kMetersXYZ_to_PixelsXY[0]];
 					var trs_sy = trs_scale[kMetersXYZ_to_PixelsXY[1]];
-					if(anim.infl < 1.0){
-						cn_node.scaleX = Utils.f2fLerped(cn_node.scaleX,trs_sx,anim.infl);
-						cn_node.scaleY = Utils.f2fLerped(cn_node.scaleY,trs_sx,anim.infl);
+					if(infl < 1.0){
+						cn_node.scaleX = Utils.f2fLerped(cn_node.scaleX,trs_sx,infl);
+						cn_node.scaleY = Utils.f2fLerped(cn_node.scaleY,trs_sx,infl);
 					}else{
 						cn_node.scaleX = trs_sx;
 						cn_node.scaleY = trs_sy;
@@ -727,8 +727,8 @@ class PFFScene {
 					cn_node.sxsy_dirty++;
 					var alpha_self = trs_scale[kMetersXYZ_freeAxis];
 					if(alpha_self != cn_node.alpha_self){
-						if(anim.infl < 1.0){
-							cn_node.alpha_self = Utils.f2fLerped(cn_node.alpha_self,alpha_self,anim.infl);
+						if(infl < 1.0){
+							cn_node.alpha_self = Utils.f2fLerped(cn_node.alpha_self,alpha_self,infl);
 						}else{
 							cn_node.alpha_self = alpha_self;
 						}

@@ -144,6 +144,7 @@ class Boot extends openfl.display.Sprite
 		gltf_root.y = _starling.stage.stageHeight * 0.5;
 		_root.addChild(gltf_root);
 
+		// Test: compositions switch
 		var activeUI = 1;
 		gscene.addComposition("ui1",["ui1"],["ui2"]);
 		gscene.addComposition("ui2",["ui2"],["ui1"]);
@@ -156,14 +157,18 @@ class Boot extends openfl.display.Sprite
 				gscene.activateComposition("ui2");
 			}
 		}, 3.0);
-		// var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
-		// var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
-		// var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
-		var allAnims = gscene.filterAnimsByName(["*"]);
-		var animTime = 0.0;
-		Starling.current.juggler.repeatCall(()-> {
-			gscene.applyAnimations(allAnims, animTime);
-			animTime = (animTime+0.03)%2.0;
-		}, 0.1);
+		// Test: direct apply animations
+		// // var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
+		// // var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
+		// // var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
+		// var allAnims = gscene.filterAnimsByName(["*"]);
+		// var animTime = 0.0;
+		// Starling.current.juggler.repeatCall(()-> {
+		// 	gscene.applyAnimations(allAnims, animTime);
+		// 	animTime = (animTime+0.03)%2.0;
+		// }, 0.1);
+		// Test: animation manager with meta-timeline
+		var anims = new PFFAnimManager(gscene);
+		
 	}
 }

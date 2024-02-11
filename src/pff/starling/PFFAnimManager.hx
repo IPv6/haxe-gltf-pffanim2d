@@ -1,7 +1,12 @@
 package pff.starling;
+
+import starling.core.*;
 import starling.display.DisplayObject;
 import starling.display.DisplayObjectContainer;
 import starling.animation.*;
+
+import pff.starling.PFFScene.PFFScene;
+import pff.starling.PFFTimeline.PFFTimeline;
 
 class PFFNodeProps {
 	public function new(){};
@@ -41,17 +46,63 @@ class PFFAnimState {
 	public function new(){};
 	public var full_path:String = "";
 	public var gltf_id:Int = -1;
-	public var gltfTime:Float = 0.0;
 	public var gltfTimeMin:Float = 0.0;
 	public var gltfTimeMax:Float = 0.0;
-	public var infl:Float = 1.0;
 	public var timestamps:Array< Array<Float> > = null;
 }
 
+class PFFAnimStateInst extend PFFAnimState {
+	public var infl:Float = 1.0;
+}
+
+/**
+* PFFAnimManager supports convenience grouping and control over animations
+* - automatic Juggler activation/deactivation
+* - normalized time (0.0 = animation start, 1.0 = animation end)
+* - animation speed, possibility to "revert" animation
+* - meta timelines with "events" and "commands" - can be used to make "ping-pong","loop" and other time behaviour customization
+**/
 class PFFAnimManager implements IAnimatable {
-	public function new(){};
+	public var scene:PFFScene;
+	public var juggler_id:Int = -1;
+	public var timelines:Array<PFFTimeline> = [];
+	public function new(pffsc:PFFScene){
+		scene = pffsc;
+	};
+	public function playAnimsByName(names:Utils.ArrayS, atNrmTime:Float, withTimeline:PFFTimeline):Bool {
+		var anims = scene.filterAnimsByName(names,false);
+		if(anims.length == 0){
+			// no anims found, but probably just compositions
+			var compos = 0;
+			for (nm in names){
+				if(scene.activateComposition(nm)){
+					compos++;
+				}
+			}
+			return compos>0;
+		}
+		withTimeline.anims = anims;
+		return playTimeline(withTimeline, atNrmTime);
+	}
+	public function playTimeline(timeline:PFFTimeline, atNrmTime:Float):Bool {
+		if(Utils.safeLen(timeline?.anims) == 0){
+			// Timeline have no content
+			return false;
+		}
+		if(juggler_id < 0){
+			juggler_id = Starling.current.juggler.add(this);
+		}
+		return true;
+	}
+	public function findTimeline(tname:String): PFFTimeline {
+		return null;
+	}
 	public function advanceTime(time:Float):Void {
-		
+		var activeTimelines = 0;
+		if(activeTimelines == 0 && juggler_id >= 0){
+			Starling.current.juggler.removeByID(juggler_id);
+			juggler_id = -1;
+		}
 	}
 }
 
