@@ -221,24 +221,28 @@ class Utils {
 		spr.rotation = props.rotation;
 	}
 
-	static public function undumpAnimSprite(spr:DisplayObject, props:PFFNodeState):Void {
-		if(props.a_dirty > 0){
-			spr.visible = props.visible;
+	static public function undumpAnimSprite(spr:DisplayObject, state:PFFNodeState):Void {
+		if(state.a_dirty > 0){
+			spr.visible = state.props.visible;
 			// spr.alpha = props.alpha_self*props.alpha_mask;
-			spr.alpha = props.alpha_self;
+			spr.alpha = state.props.alpha_self;
+			state.a_dirty = 0;
 		}
-		if(props.xy_dirty > 0){
-			spr.x = props.x;
-			spr.y = props.y;
-		// spr.pivotX = props.pivotX;
-		// spr.pivotY = props.pivotY;
+		if(state.xy_dirty > 0){
+			spr.x = state.props.x;
+			spr.y = state.props.y;
+			// spr.pivotX = state.props.pivotX;
+			// spr.pivotY = state.props.pivotY;
+			state.xy_dirty = 0;
 		}
-		if(props.sxsy_dirty > 0){
-			spr.scaleX = props.scaleX;
-			spr.scaleY = props.scaleY;
+		if(state.sxsy_dirty > 0){
+			spr.scaleX = state.props.scaleX;
+			spr.scaleY = state.props.scaleY;
+			state.sxsy_dirty = 0;
 		}
-		if(props.r_dirty > 0){
-			spr.rotation = props.rotation;
+		if(state.r_dirty > 0){
+			spr.rotation = state.props.rotation;
+			state.r_dirty = 0;
 		}
 	}
 

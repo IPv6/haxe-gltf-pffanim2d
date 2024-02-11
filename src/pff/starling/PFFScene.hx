@@ -170,10 +170,10 @@ class PFFScene {
 				// Special case for kPffMask_nodename
 				if(bbox_px != null){
 					var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+					starling_node.props = spr_props;
 					if(spr_props.bbox_w>0 &&  spr_props.bbox_h>0){
 						var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
 						Utils.undumpSprite(defl_quad, spr_props);
-						Utils.dumpSprite(defl_quad, starling_node);
 						defl_quad.name = nd.name;
 						starling_node.sprite = defl_quad;
 					}else{
@@ -183,6 +183,9 @@ class PFFScene {
 			}else{
 				// fillStarlingNode can be overloaded - undumping initial sprite values from sprite itself
 				fillStarlingNode(starling_node, nd.name, texture, trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+			}
+			if(starling_node.props == null){
+				starling_node.props = new PFFNodeProps();
 			}
 			nodes_list.push(starling_node);
 		}
@@ -380,6 +383,7 @@ class PFFScene {
 	**/
 	public function fillStarlingNode(starling_node:PFFNodeState, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+		starling_node.props = spr_props;
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
 			if(spr_props.bbox_w > 0 && spr_props.bbox_h > 0){
@@ -399,7 +403,6 @@ class PFFScene {
 		defl_spr.touchable = false;
 		Utils.undumpSprite(defl_spr, spr_props);
 		// trace("Sprite init", node_name, spr_props.toString());
-		Utils.dumpSprite(defl_spr, starling_node);
 		defl_spr.name = node_name;
 		starling_node.sprite = defl_spr;
 		return true;

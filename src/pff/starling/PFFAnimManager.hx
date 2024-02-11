@@ -26,8 +26,9 @@ class PFFNodeProps {
 	}
 }
 
-class PFFNodeState extends PFFNodeProps {
-	public function new(){super();};
+class PFFNodeState {
+	public function new(){};
+	public var props:PFFNodeProps = null;
 	public var sprite:starling.display.DisplayObject = null;// Sprite or Quad (clip mask)
 	public var gltf_id:Int = -1;
 	public var gltf_parent_id:Int = -1;
@@ -51,10 +52,11 @@ class PFFAnimProps {
 	public var timestamps:Array< Array<Float> > = null;
 }
 
-typedef PFFAnimState = {
-	anim:PFFAnimProps,
-	gltfTime:Float,
-	infl:Float,
+class PFFAnimState {
+	public function new(){};
+	public var anim:PFFAnimProps = null;
+	public var gltfTime:Float = 0.0;
+	public var infl:Float = 0.0;
 }
 
 /**
