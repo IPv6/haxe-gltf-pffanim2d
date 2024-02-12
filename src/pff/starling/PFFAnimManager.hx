@@ -8,6 +8,8 @@ import starling.animation.*;
 import pff.starling.PFFScene.PFFScene;
 import pff.starling.PFFTimeline.PFFTimeline;
 import pff.starling.PFFTimeline.TimelineActivationOrder;
+import pff.starling.PFFTimeline.TimelineEvent;
+import pff.starling.PFFTimeline.TimelineAction;
 
 class PFFNodeProps {
 	public function new(){};
@@ -133,23 +135,79 @@ class PFFAnimManager implements IAnimatable {
 		this.timelines = active_timelines;
 		return flushed;
 	}
+
+	var activeAnims:Array<PFFAnimState> = [];
+	var activeEvents:Array<TimelineEvent> = [];
 	public function advanceTime(delta_sec:Float):Void {
-		var activeAnims:Array<PFFAnimState> = [];
 		for(ts in timelines){
-			ts.advanceTime(delta_sec);
+			var triggeredEvent = ts.advanceTime(delta_sec);
+			if(triggeredEvent != null){
+				for(ev in triggeredEvent){
+					if(ev.event_timeline == null){
+						if(ev.last_triggered_at == null){
+							ev.last_triggered_at = ts;
+						}
+					}else if(ev.last_triggered_at == null || ev.last_triggered_at.name != ev.event_timeline){
+						ev.last_triggered_at = findTimeline(ev.event_timeline);
+					}
+					activeEvents.push(ev);
+				}
+			}
 			if(ts.isActive()){
 				for(an in ts.anims){
 					activeAnims.push(an);
 				}
 			}
 		}
+		for(ev in activeEvents){
+			activateAction(ev.event_action, ev.last_triggered_at);
+		}
 		if(activeAnims.length > 0){
 			scene.applyAnimations(activeAnims);
 		}else if(juggler_id >= 0){
-			trace("stopping animMan");
+			scene.log_i("PFFAnimManager: Stopping, no active animations");
 			Starling.current.juggler.removeByID(juggler_id);
 			juggler_id = -1;
 		}
+		activeAnims.resize(0);
+		activeEvents.resize(0);
+	}
+
+	/**
+	* Timeline behaviour change
+	* can be used to manually stop/play/revert/etc animation at any time
+	**/
+	public function activateAction(action:TimelineAction, target_timeline:PFFTimeline):Bool {
+		if(target_timeline == null){
+			return false;
+		}
+		// scene.log_i('PFFAnimManager: Activating animation event: ${action}, ${target_timeline.name}');
+		switch (action) {
+			case STOP:
+				target_timeline.setTimeScale(0.0);
+			case SPEED(new_speed):
+				target_timeline.setTimeScale(new_speed);
+			case JUMP(to_time, time_mode):
+				if(time_mode == RATIO){
+					target_timeline.setTimeByRatio(to_time);
+				}else{
+					target_timeline.setTimeByGltfTime(to_time);
+				}
+			case STOP_SMOOTH(fade_sec):
+				var tween = new Tween(target_timeline, fade_sec);
+				tween.animate("timeScale", 0.0);
+				Starling.current.juggler.add(tween);
+			case FADE_IN(fade_sec):
+				var tween = new Tween(target_timeline, fade_sec);
+				target_timeline.setInfluence(0.0);
+				tween.animate("influence", 1.0);
+				Starling.current.juggler.add(tween);
+			case FADE_OUT(fade_sec):
+				var tween = new Tween(target_timeline, fade_sec);
+				tween.animate("influence", 0.0);
+				Starling.current.juggler.add(tween);
+		}
+		return true;
 	}
 }
 

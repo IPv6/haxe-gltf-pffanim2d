@@ -9,16 +9,26 @@ enum abstract TimelineActivationOrder(Int) from Int to Int {
 	var REPLACE;
 }
 
+enum abstract TimelineDirection(Int) from Int to Int {
+	var BACKWARD = -1;
+	var ANY = 0;
+	var FORWARD = 1;
+}
+
 enum abstract TimelineTimeMode(Int) from Int to Int {
 	var GLTF = 1;
 	var RATIO;
-	var ONCE;
+	var GLTF_ONCE;
+	var NEVER;
 }
 
 enum TimelineAction {
-	STOP;// same as CHANGE_SPEED to 0
-	SPEED( new_speed:Float );
+	STOP;// Timeline timeScale = 0, same as SPEED(0)
+	SPEED( new_speed:Float );// Timeline timeScale to any value
 	JUMP( to_time:Float, time_mode:TimelineTimeMode );
+	STOP_SMOOTH( fade_sec:Float );// Timeline timeScale ???->0.0
+	FADE_IN( fade_sec:Float );// Timeline influence 0->1
+	FADE_OUT( fade_sec:Float );// Timeline influence ???->0. Not a stopping action! zero influence == apply with zero effect, but time still go on
 }
 
 class TimelineEvent {
@@ -26,12 +36,14 @@ class TimelineEvent {
 		trigger_time = on_time;
 		trigger_time_mode = time_mode;
 		event_action = action;
-		target_timeline = target;
+		event_timeline = target;
 	};
 	public var trigger_time:Float = 0;
-	public var trigger_time_mode:TimelineTimeMode = ONCE;
+	public var trigger_time_mode:TimelineTimeMode = GLTF_ONCE;
+	public var trigger_limit_by_direction:TimelineDirection = ANY;
 	public var event_action:TimelineAction = STOP;
-	public var target_timeline:String = null;
+	public var event_timeline:String = null;
+	public var last_triggered_at:PFFTimeline = null;
 }
 
 /**
@@ -45,6 +57,7 @@ class PFFTimeline {
 	public var timeScale:Float = 1.0;
 	public var timeCurrent:Float = 0.0;
 	public var timePhase:Float = 0.0;
+	public var influence:Float = 1.0;
 	public var gltfTimeMin:Float = -1.0;
 	public var gltfTimeMax:Float = -1.0;
 	public function new(tname:String = null){
@@ -62,6 +75,7 @@ class PFFTimeline {
 			animStates.push(ans);
 		}
 		this.anims = animStates;
+		// Must reset time ti initalize
 		setTimeByRatio(0.0);
 		return true;
 	}
@@ -74,16 +88,17 @@ class PFFTimeline {
 		timeScale = scale;
 		return true;
 	}
+	public function setInfluence(inf:Float):Bool {
+		influence = inf;
+		return true;
+	}
 	public function isActive():Bool {
 		if(Math.abs(timeScale) < Utils.GLM_EPSILON){
 			return false;
 		}
 		return true;
 	}
-	public function setTimeByRatio(normalizedTime:Float): Bool {
-		if(Utils.safeLen(anims) == 0){
-			return false;
-		}
+	public function getGltfTimeByRatio(normalizedTime:Float): Float {
 		if(gltfTimeMin < 0 && gltfTimeMax < 0){
 			for (ans in anims){
 				if(gltfTimeMin < 0 || gltfTimeMax < 0){
@@ -98,19 +113,87 @@ class PFFTimeline {
 		// if(Math.abs(gltfTimeMax-gltfTimeMin) < Utils.GLM_EPSILON){
 		// 	return false;
 		// }
-		timeCurrent = gltfTimeMin + (gltfTimeMax-gltfTimeMin) * normalizedTime;
+		var gltfTime = gltfTimeMin + (gltfTimeMax-gltfTimeMin) * normalizedTime;
+		return gltfTime;
+	}
+	public function setTimeByGltfTime(gltfTime:Float): Bool {
+		timeCurrent = gltfTime;
 		return true;
 	}
-	public function advanceTime(delta_sec:Float):Array<Any> {
+	public function setTimeByRatio(normalizedTime:Float): Bool {
+		if(Utils.safeLen(anims) == 0){
+			// not possible to recalc in gltfTime
+			return false;
+		}
+		var gltfTime = getGltfTimeByRatio(normalizedTime);
+		return setTimeByGltfTime(gltfTime);
+	}
+	var triggered_events:Array<TimelineEvent> = [];
+	public function advanceTime(delta_sec:Float):Array<TimelineEvent> {
 		delta_sec = delta_sec*timeScale;
 		if(Math.abs(delta_sec) < Utils.GLM_EPSILON){
 			return null;
 		}
-		timeCurrent += delta_sec;
+		triggered_events.resize(0);
+		var timeCurrent_next = timeCurrent+delta_sec;
+		if(this.events != null){
+			for(ev in this.events){
+				if(ev.trigger_time_mode	== NEVER){
+					continue;
+				}
+				if(ev.trigger_time_mode	== GLTF_ONCE){
+					triggered_events.push(ev);
+					ev.trigger_time_mode = NEVER;
+					continue;
+				}
+				if(ev.trigger_limit_by_direction == FORWARD && delta_sec < 0.0){
+					continue;
+				}
+				if(ev.trigger_limit_by_direction == BACKWARD && delta_sec > 0.0){
+					continue;
+				}
+				var trigger_time = ev.trigger_time;
+				if(ev.trigger_time_mode	== RATIO){
+					trigger_time = getGltfTimeByRatio(ev.trigger_time);
+				}
+				if(delta_sec > 0){
+					if(trigger_time >= timeCurrent && trigger_time < timeCurrent_next){
+						triggered_events.push(ev);
+					}
+				}else{
+					if(trigger_time > timeCurrent_next && trigger_time <= timeCurrent){
+						triggered_events.push(ev);
+					}
+				}
+			}
+		}
+		timeCurrent = timeCurrent_next;
 		for(an in anims){
+			an.influence = influence;
 			an.gltfTime = timeCurrent+timePhase;
 		}
-		return null;
+		return triggered_events;
 	}
 
+	public static function makeTimelinePlayAndStop():PFFTimeline {
+		var res = new PFFTimeline();
+		var stopAtEnd = new TimelineEvent(1.0, RATIO, STOP);
+		res.setEvents([stopAtEnd]);
+		return res;
+	}
+	public static function makeTimelinePlayAndWrap():PFFTimeline {
+		var res = new PFFTimeline();
+		var wrapAtEnd = new TimelineEvent(1.0, RATIO, JUMP(0.0, RATIO));
+		res.setEvents([wrapAtEnd]);
+		return res;
+	}
+	public static function makeTimelinePingPong():PFFTimeline {
+		var res = new PFFTimeline();
+		var toogleAtStart = new TimelineEvent(0.0, RATIO, SPEED(1.0));
+		toogleAtStart.trigger_limit_by_direction = BACKWARD;
+		var toogleAtEnd = new TimelineEvent(1.0, RATIO, SPEED(-1.0));
+		toogleAtEnd.trigger_limit_by_direction = FORWARD;
+		res.setEvents([toogleAtStart, toogleAtEnd]);
+		return res;
+	}
 }

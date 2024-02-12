@@ -13,6 +13,7 @@ import pff.starling.PFFAnimManager.PFFNodeProps;
 import pff.starling.PFFAnimManager.PFFNodeState;
 import pff.starling.PFFAnimManager.PFFAnimProps;
 import pff.starling.PFFAnimManager.PFFAnimState;
+import pff.starling.PFFTimeline.TimelineAction;
 import openfl.utils.Assets;
 
 import starling.core.*;
@@ -181,6 +182,15 @@ class Boot extends openfl.display.Sprite
 		// }, 0.1);
 		// Test: animation manager with meta-timeline
 		var anims = new PFFAnimManager(gscene);
-		
+		// var timeline = PFFTimeline.makeTimelinePlayAndStop();
+		// var timeline = PFFTimeline.makeTimelinePlayAndWrap();
+		var timeline = PFFTimeline.makeTimelinePingPong();
+		anims.playAnimsByName(["*"], timeline);
+		Starling.current.juggler.delayCall(()-> {
+			var stop_action = TimelineAction.STOP_SMOOTH(1.0);
+			// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
+			// var stop_action = TimelineAction.FADE_OUT(1.0);
+			anims.activateAction(stop_action, timeline);
+		}, 10.0);
 	}
 }
