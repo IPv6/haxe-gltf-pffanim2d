@@ -7,6 +7,7 @@ import starling.animation.*;
 
 import pff.starling.PFFScene.PFFScene;
 import pff.starling.PFFTimeline.PFFTimeline;
+import pff.starling.PFFTimeline.TimelineActivationOrder;
 
 class PFFNodeProps {
 	public function new(){};
@@ -78,7 +79,7 @@ class PFFAnimManager implements IAnimatable {
 	public function new(pffsc:PFFScene){
 		scene = pffsc;
 	};
-	public function playAnimsByName(names:Utils.ArrayS, withTimeline:PFFTimeline):Bool {
+	public function playAnimsByName(names:Utils.ArrayS, withTimeline:PFFTimeline, activationOrder:TimelineActivationOrder = REPLACE):Bool {
 		var anims = scene.filterAnimsByName(names,false);
 		if(anims.length == 0){
 			// no anims found, but probably just compositions
@@ -91,12 +92,20 @@ class PFFAnimManager implements IAnimatable {
 			return compos>0;
 		}
 		withTimeline.setAnims(anims);
-		return playTimeline(withTimeline);
+		return playTimeline(withTimeline, activationOrder);
 	}
-	public function playTimeline(timeline:PFFTimeline):Bool {
+	public function playTimeline(timeline:PFFTimeline, activationOrder:TimelineActivationOrder = REPLACE):Bool {
 		if(Utils.safeLen(timeline?.anims) == 0){
 			// Timeline have no content
 			return false;
+		}
+		switch activationOrder{
+			case REPLACE:
+				timelines = [timeline];
+			case TOP:
+				timelines.push(timeline);
+			case BOTTOM:
+				timelines.unshift(timeline);
 		}
 		if(juggler_id < 0){
 			juggler_id = Starling.current.juggler.add(this);
@@ -110,6 +119,19 @@ class PFFAnimManager implements IAnimatable {
 			}
 		}
 		return null;
+	}
+	public function flushInactive():Int {
+		var flushed = 0;
+		var active_timelines:Array<PFFTimeline> = [];
+		for(ts in timelines){
+			if(ts.isActive()){
+				active_timelines.push(ts);
+			}else{
+				flushed++;
+			}
+		}
+		this.timelines = active_timelines;
+		return flushed;
 	}
 	public function advanceTime(delta_sec:Float):Void {
 		var activeAnims:Array<PFFAnimState> = [];

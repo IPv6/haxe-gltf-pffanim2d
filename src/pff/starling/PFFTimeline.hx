@@ -3,25 +3,34 @@ package pff.starling;
 import pff.starling.PFFAnimManager.PFFAnimProps;
 import pff.starling.PFFAnimManager.PFFAnimState;
 
-enum TimelineEventTTime {
-	GLTF(t:Float);
-	RATIO(t:Float);
+enum abstract TimelineActivationOrder(Int) from Int to Int {
+	var TOP = 1;
+	var BOTTOM;
+	var REPLACE;
 }
 
-enum TimelineEventType {
+enum abstract TimelineTimeMode(Int) from Int to Int {
+	var GLTF = 1;
+	var RATIO;
+	var ONCE;
+}
+
+enum TimelineAction {
 	STOP;// same as CHANGE_SPEED to 0
-	SPEED(new_speed:Float);
-	JUMP( to_time:TimelineEventTTime );
+	SPEED( new_speed:Float );
+	JUMP( to_time:Float, time_mode:TimelineTimeMode );
 }
 
 class TimelineEvent {
-	public function new(on_time:TimelineEventTTime, type:TimelineEventType, target:String = null){
+	public function new(on_time:Float, time_mode:TimelineTimeMode, action:TimelineAction, target:String = null){
 		trigger_time = on_time;
-		event_type = type;
+		trigger_time_mode = time_mode;
+		event_action = action;
 		target_timeline = target;
 	};
-	public var trigger_time:TimelineEventTTime = GLTF(0);
-	public var event_type:TimelineEventType = STOP;
+	public var trigger_time:Float = 0;
+	public var trigger_time_mode:TimelineTimeMode = ONCE;
+	public var event_action:TimelineAction = STOP;
 	public var target_timeline:String = null;
 }
 
