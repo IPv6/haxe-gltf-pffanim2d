@@ -100,6 +100,11 @@ class PFFAnimManager implements IAnimatable {
 		if(timeline == null){
 			// Full reset, drop all
 			timelines.resize(0);
+			if(juggler_id >= 0){
+				scene.log_i("PFFAnimManager: Stopping, no timelines");
+				Starling.current.juggler.removeByID(juggler_id);
+				juggler_id = -1;
+			}
 			return true;
 		}
 		return timelines.remove(timeline);
