@@ -1,5 +1,5 @@
 # PFFAnim2d - Simple (2d) gLTF animation support in OpenFL/Starling
-- Intended workflow: Blender -> gLTF -> OpenFL/Starling game
+- Intended workflow: Krita -> Blender animations -> gLTF -> OpenFL+Starling game
 - Supported: TRS animations of Blender Empty/Blender Plane(Quad)
 - Somewhat supported: Alpha animation, Clipping rect animation (sprite masking) - see below
 
@@ -15,6 +15,8 @@
 - Quads may have unlit textures - quad material image applied as Texture for corresponding starling node (by default)
 - Quad can have axis-aligned offset from object origin - offset converted to Sprite pivot (by default)
 - Quad/Empty can have custom props - they are loaded and can be used for customizing starling node creation
+- Quad/Empty loc.Z define draw order fro same-level elements, for Starling playback.
+  - Draw order fixed by scene basic (not animated) state
 - Animations: Armature animations are not supported directly - can be baked on valid objects before export
 - Animations: Actions must be stashed (Dopesheet-Action Editor) or pushed to NLA track (NLA Editor)
   - Export name will be the name of the action in both cases
