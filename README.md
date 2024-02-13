@@ -26,6 +26,7 @@
 
 gLTF does not support non-TRS animation targets. So some extra efforts required to make it happen with Blender && gLTF.
 1) Basic alpha derived from node's Scale Z (Blender z-axis), since it's not used for 2D scaling and defaults to 1.0. Named `alpha_self` in hx
+- Material nodes with such alpha support [here](demo/demo_art/blender_mat_ScaleZ_as_alpha.png)
 2) Animated clipping: some Nodes are served as "placeholders" for holding such animations.
 - Each Empty can contain Plane (quad) Mesh object with the name "#pff:mask". Such object have special meaning for animation in Starling
 - Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer

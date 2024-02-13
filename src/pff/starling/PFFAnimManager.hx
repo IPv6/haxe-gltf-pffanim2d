@@ -96,6 +96,14 @@ class PFFAnimManager implements IAnimatable {
 		withTimeline.setAnims(anims);
 		return playTimeline(withTimeline, activationOrder);
 	}
+	public function removeTimeline(timeline:PFFTimeline): Bool {
+		if(timeline == null){
+			// Full reset, drop all
+			timelines.resize(0);
+			return true;
+		}
+		return timelines.remove(timeline);
+	}
 	public function playTimeline(timeline:PFFTimeline, activationOrder:TimelineActivationOrder = REPLACE):Bool {
 		if(Utils.safeLen(timeline?.anims) == 0){
 			// Timeline have no content
@@ -139,6 +147,7 @@ class PFFAnimManager implements IAnimatable {
 	var activeAnims:Array<PFFAnimState> = [];
 	var activeEvents:Array<TimelineEvent> = [];
 	public function advanceTime(delta_sec:Float):Void {
+		// no returns, juggler must stop if no anims
 		for(ts in timelines){
 			var triggeredEvent = ts.advanceTime(delta_sec);
 			if(triggeredEvent != null){
