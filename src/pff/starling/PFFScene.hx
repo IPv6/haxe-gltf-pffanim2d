@@ -218,7 +218,7 @@ class PFFScene {
 					child_starling_node.gltf_parent_id = starling_node.gltf_id;
 					if(child_gltf_node.name.indexOf(kPffMask_nodename) >= 0){
 						// Special case: quad mask
-						trace("- adding MASK", node_sprite, child_starling_node.sprite);
+						// trace("- adding MASK", node_sprite, child_starling_node.sprite);
 						if(child_starling_node.sprite != null){
 							node_sprite.mask = child_starling_node.sprite;
 						}
