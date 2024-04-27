@@ -107,13 +107,10 @@ class Boot extends openfl.display.Sprite
 		// var bg_tex = _assets.getTexture("bg.jpg");
 		// var bg_img:starling.display.Image = new starling.display.Image(bg_tex);
 		// _root.addChild(bg_img);
-		var test_anims = 0;
-
+		var test_anims = 2; // 0;
 		// test_scene_static, test_scene_anim: GLTF LOADING
 		// Folder used for test in project.xml - assets
-		var asset_obj = _assets.getObject("root_ww1920_hh1080.gltf");
-		// var asset_obj = _assets.getObject("test_scene_static_v2.gltf");
-		// var asset_obj = _assets.getObject("test_scene_anims_v2.gltf");test_anims=2;
+		var asset_obj = _assets.getObject("test_scene.gltf");
 		// var asset_ba = _assets.getByteArray("root.gltf");
 		// var asset_raw:String = asset_ba.readUTFBytes(asset_ba.length);
 		var gltf_res:Utils.MapS2A = new Utils.MapS2A();

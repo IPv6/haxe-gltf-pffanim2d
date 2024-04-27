@@ -49,15 +49,18 @@ class PFFScene {
 	// Blindness conversion between gLTF translations/locations and pixels
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
-	// // Y-up. px_x = loc[0], px_y = loc[2]
+
+	// Y-up in Blender (front view) ends up Z-up in gltf (X-rotation with Y-up checkbox)
+	// Y-up checkbox required since importer ALWAYS conter-rotates...
+	// // Y-up. px_x = loc[0], px_y = loc[2], z-order = loc[1]
 	// public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];
-	// public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0];
-	// public var kMetersXYZ_to_ZOrder:Float = -10.0;// Blender -Y
+	// public var kMetersXYZ_to_XYScale:Utils.ArrayF = [1.0,-1.0];
+	// public var kMetersXYZ_to_ZScale:Float = -10.0;// Blender -Y
 	// public var kMetersXYZ_to_Rotation:Float = 1.0;
-	// Z-up. px_x = loc[0], px_y = loc[1]
+	// Z-up. px_x = loc[0], px_y = loc[1], z-order = loc[2]
 	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,1];
-	public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0,1.0];
-	public var kMetersXYZ_to_ZOrder:Float = 10.0;// Blender +Z
+	public var kMetersXYZ_to_XYScale:Utils.ArrayF = [1.0,-1.0];
+	public var kMetersXYZ_to_ZScale:Float = 10.0;// Blender +Z
 	public var kMetersXYZ_to_Rotation:Float = -1.0;
 	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
 	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask. Can be "#pff:mask.001" (Blender specifics) as well, etc
@@ -168,7 +171,7 @@ class PFFScene {
 			starling_node.full_path = nd.name;// Basic default, no hier
 			starling_node.gltf_id = nd.id;
 			starling_node.customprops = customprops;
-			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis] * kMetersXYZ_to_ZOrder;
+			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis] * kMetersXYZ_to_ZScale;
 			// trace('DBG: creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${starling_node.z_order} ${customprops}');
 			if(nd.name.indexOf(kPffMask_nodename) >= 0){
 				// Special case for kPffMask_nodename
@@ -352,8 +355,8 @@ class PFFScene {
 	}
 
 	public function prepareStarlingSpriteProps(trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):PFFNodeProps {
-		var pos_x:Float = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_PixelsXY_scale[0];
-		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_PixelsXY_scale[1];
+		var pos_x:Float = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_XYScale[0];
+		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_XYScale[1];
 		var scale_x:Float = trs_scale[kMetersXYZ_to_PixelsXY[0]];
 		var scale_y:Float = trs_scale[kMetersXYZ_to_PixelsXY[1]];
 		var rotation:Float = kMetersXYZ_to_Rotation * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
@@ -377,8 +380,8 @@ class PFFScene {
 		spr_props.rotation = rotation;
 		spr_props.bbox_w = bbox_max_x-bbox_min_x;
 		spr_props.bbox_h = bbox_max_y-bbox_min_y;
-		spr_props.pivotX = spr_props.bbox_w*0.5 - (bbox_min_x+bbox_max_x)*0.5*kMetersXYZ_to_PixelsXY_scale[0];
-		spr_props.pivotY = spr_props.bbox_h*0.5 - (bbox_min_y+bbox_max_y)*0.5*kMetersXYZ_to_PixelsXY_scale[1];
+		spr_props.pivotX = spr_props.bbox_w*0.5 - (bbox_min_x+bbox_max_x)*0.5*kMetersXYZ_to_XYScale[0];
+		spr_props.pivotY = spr_props.bbox_h*0.5 - (bbox_min_y+bbox_max_y)*0.5*kMetersXYZ_to_XYScale[1];
 		return spr_props;
 	}
 
@@ -692,8 +695,8 @@ class PFFScene {
 				affectedNodes[cn_node.gltf_id] = cn_node;
 				if(ch.path == "translation"){
 					var trs_location_px = Utils.vec2vecScaled(val_at_t, kMeters3D_to_Pixels2D_ratio, tmp_vec);
-					var trs_x = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_PixelsXY_scale[0];
-					var trs_y = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_PixelsXY_scale[1];
+					var trs_x = trs_location_px[kMetersXYZ_to_PixelsXY[0]]*kMetersXYZ_to_XYScale[0];
+					var trs_y = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_XYScale[1];
 					if(infl < 1.0){
 						cn_node.props.x = Utils.f2fLerped(cn_node.props.x,trs_x,infl);
 						cn_node.props.y = Utils.f2fLerped(cn_node.props.y,trs_y,infl);

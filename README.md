@@ -22,7 +22,8 @@
 - Animations: Actions must always have frame 0 keyed
   - gLTF 'Actions' exporter resets any timeline offset anyway
 - Animations: Armature animations are not supported directly - they need to be baked on valid objects before export
-- Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up: Off`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
+- Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up: On`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
+  - Z-up/Y-up: Blender importer always counter-rotate imported file, so with 'Y Up: On' front-view export ends up in Z-up in exported gltf scene, but reimport/reexport works well
 
 # Alpha && Clipping animation conventions
 
