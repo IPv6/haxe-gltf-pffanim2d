@@ -97,9 +97,12 @@ class Utils {
 
 	// Quat math: https://github.com/hamaluik/haxe-glm/blob/master/src/glm/Quat.hx
 	static public var GLM_EPSILON:Float = 0.0000001;
+	static public var GLM_SQRT2:Float =  1.41421356237309504880; // sqrt(2)
 	static public function quat2euler(quat:Either<ArrayF,VectorF>):ArrayF {
 		// Expected to return COPY. Quat expected to be NORMALIZED.
 		// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+		// Must match Blender Quaternion to EulerXYZ (For Y-up rotations)
+		// https://github.com/dfelinto/blender/blob/87a0770bb969ce37d9a41a04c1658ea09c63933a/source/blender/blenlib/intern/math_rotation.c#L1332
 		if(quat == null){
 			return [0.0, 0.0, 0.0];
 		}
@@ -107,23 +110,76 @@ class Utils {
 		var qy = quat[1];
 		var qz = quat[2];
 		var qw = quat[3];
-
-		// roll (x-axis rotation)
-		var sinr_cosp = 2 * (qw * qx + qy * qz);
-		var cosr_cosp = 1 - 2 * (qx * qx + qy * qy);
-		var roll = Math.atan2(sinr_cosp, cosr_cosp);
-	
-		// pitch (y-axis rotation)
-		var sinp = Math.sqrt(1 + 2 * (qw * qy - qx * qz));
-		var cosp = Math.sqrt(1 - 2 * (qw * qy - qx * qz));
-		var pitch = 2 * Math.atan2(sinp, cosp) - Math.PI / 2;
-	
-		// yaw (z-axis rotation)
-		var siny_cosp = 2 * (qw * qz + qx * qy);
-		var cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
-		var yaw = Math.atan2(siny_cosp, cosy_cosp);
-	
-		return [roll, pitch, yaw];
+		// // roll (x-axis rotation)
+		// var sinr_cosp = 2 * (qw * qx + qy * qz);
+		// var cosr_cosp = 1 - 2 * (qx * qx + qy * qy);
+		// var roll = Math.atan2(sinr_cosp, cosr_cosp);
+		// // pitch (y-axis rotation)
+		// var sinp = Math.sqrt(1 + 2 * (qw * qy - qx * qz));
+		// var cosp = Math.sqrt(1 - 2 * (qw * qy - qx * qz));
+		// var pitch = 2 * Math.atan2(sinp, cosp) - Math.PI / 2;
+		// // yaw (z-axis rotation)
+		// var siny_cosp = 2 * (qw * qz + qx * qy);
+		// var cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
+		// var yaw = Math.atan2(siny_cosp, cosy_cosp);
+		// return [roll, pitch, yaw];
+		// ====================
+		// Blender quat_to_mat3 https://github.com/dfelinto/blender/blob/87a0770bb969ce37d9a41a04c1658ea09c63933a/source/blender/blenlib/intern/math_rotation.c#L180
+		var q0:Float, q1:Float, q2:Float, q3:Float, qda:Float, qdb:Float, qdc:Float, qaa:Float, qab:Float, qac:Float, qbb:Float, qbc:Float, qcc:Float;
+		var q0 = GLM_SQRT2 * qw;//q[0];
+		var q1 = GLM_SQRT2 * qx;//q[1];
+		var q2 = GLM_SQRT2 * qy;//q[2];
+		var q3 = GLM_SQRT2 * qz;//q[3];
+		var qda = q0 * q1;
+		var qdb = q0 * q2;
+		var qdc = q0 * q3;
+		var qaa = q1 * q1;
+		var qab = q1 * q2;
+		var qac = q1 * q3;
+		var qbb = q2 * q2;
+		var qbc = q2 * q3;
+		var qcc = q3 * q3;
+		var m_0_0 = (1.0 - qbb - qcc);
+		var m_0_1 = (qdc + qab);
+		var m_0_2 = (-qdb + qac);
+		var m_1_0 = (-qdc + qab);
+		var m_1_1 = (1.0 - qaa - qcc);
+		var m_1_2 = (qda + qbc);
+		var m_2_0 = (qdb + qac);
+		var m_2_1 = (-qda + qbc);
+		var m_2_2 = (1.0 - qaa - qbb);
+		// mat3_normalized_to_eul
+		var eul1_0:Float, eul1_1:Float, eul1_2:Float;
+		var eul2_0:Float, eul2_1:Float, eul2_2:Float;
+		var cy = Math.sqrt(m_0_0*m_0_0+m_0_1*m_0_1);//hypotf
+		if (cy > 16.0 * GLM_EPSILON) {
+			eul1_0 = Math.atan2(m_1_2, m_2_2);
+			eul1_1 = Math.atan2(-m_0_2, cy);
+			eul1_2 = Math.atan2(m_0_1, m_0_0);
+			eul2_0 = Math.atan2(-m_1_2, -m_2_2);
+			eul2_1 = Math.atan2(-m_0_2, -cy);
+			eul2_2 = Math.atan2(-m_0_1, -m_0_0);
+		}
+		else {
+			eul1_0 = Math.atan2(-m_2_1, m_1_1);
+			eul1_1 = Math.atan2(-m_0_2, cy);
+			eul1_2 = 0.0;
+			eul2_0 = eul1_0;
+			eul2_1 = eul1_1;
+			eul2_2 = eul1_2;
+		}
+		if (Math.abs(eul1_0) + Math.abs(eul1_1) + Math.abs(eul1_2) >
+			Math.abs(eul2_0) + Math.abs(eul2_1) + Math.abs(eul2_2)) {
+				return [eul2_0, eul2_1, eul2_2];
+		}
+		return [eul1_0, eul1_1, eul1_2];
+	}
+	static public function quat2eulerDeg(quat:Either<ArrayF,VectorF>):ArrayF {
+		var euler = quat2euler(quat);
+		euler[0] = euler[0]/Math.PI*180.0;
+		euler[1] = euler[1]/Math.PI*180.0;
+		euler[2] = euler[2]/Math.PI*180.0;
+		return euler;
 	}
 	public static function quatDot(a:VectorF, b:VectorF):Float {
 		return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];

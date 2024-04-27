@@ -169,7 +169,7 @@ class PFFScene {
 			starling_node.gltf_id = nd.id;
 			starling_node.customprops = customprops;
 			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis] * kMetersXYZ_to_ZOrder;
-			// log_i('DBG: creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${starling_node.z_order} ${customprops}');
+			// trace('DBG: creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${starling_node.z_order} ${customprops}');
 			if(nd.name.indexOf(kPffMask_nodename) >= 0){
 				// Special case for kPffMask_nodename
 				if(bbox_px != null){
@@ -220,7 +220,7 @@ class PFFScene {
 					var child_starling_node = nodes_list[child_id];
 					var child_gltf_node = gltf_struct.nodes[child_id];
 					child_starling_node.gltf_parent_id = starling_node.gltf_id;
-					// log_i('DBG: adding node (z-ordered) ${child_starling_node.full_path} ${child_starling_node.z_order} ${child_starling_node}');
+					// trace('DBG: adding node (z-ordered) ${child_starling_node.full_path} ${child_starling_node.z_order} ${child_starling_node}');
 					if(child_gltf_node.name.indexOf(kPffMask_nodename) >= 0){
 						// Special case: quad mask
 						// trace("- adding MASK", node_sprite, child_starling_node.sprite);
@@ -388,7 +388,7 @@ class PFFScene {
 	**/
 	public function fillStarlingNode(starling_node:PFFNodeState, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
-		// log_i('DBG: fillStarlingNode ${node_name} props: ${spr_props}');
+		// trace('DBG: fillStarlingNode ${node_name} props: ${spr_props}');
 		starling_node.props = spr_props;
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
@@ -626,10 +626,11 @@ class PFFScene {
 				}
 				td = (ch_timestamps[ch_idx]-ch_timestamps[ch_idx-1]);
 				t = (gltfTime-ch_timestamps[ch_idx-1])/td;
-				if(ch.path == "rotation" && (intrp == "LINEAR" || intrp == "CUBICSPLINE")){
-					// Proper handling of 0 <-> 2PI rotations. Even for CUBICSPLINE
-					intrp = "rot_SLERP";
-					// intrp = "rot_EULER";
+				if(ch.path == "rotation" && intrp == "LINEAR"){
+					intrp = "rot_SLERP_LIN";
+				}
+				if(ch.path == "rotation" && intrp == "CUBICSPLINE"){
+					intrp = "rot_SLERP_LIN"; // "rot_SLERP_CU";
 				}
 				// trace("- interpolating", anim.full_path,ch.path,intrp, gltfTime, ch_idx, t);// haxe.Json.stringify(ch_timestamps)
 				// Getting interpolated vector
@@ -638,7 +639,7 @@ class PFFScene {
 					val_at_t = smp[ch_idx-1].output.copy();
 					var val_at_t2 = smp[ch_idx].output;
 					Utils.vec2vecLerped(val_at_t, val_at_t2, t, val_at_t);
-				}else if(intrp == "CUBICSPLINE"){
+				}else if(intrp == "CUBICSPLINE" || intrp == "rot_SLERP_CU"){
 					// The number of output elements must equal three times the number of input elements.
 					// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_overview_2
 					var vk0 = smp[ch_idx-1].output;
@@ -654,9 +655,15 @@ class PFFScene {
 							+(-2.0*t3+3.0*t2)*vk1[vi]
 							+td*(t3-t2)*ak1[vi];
 					}
-				}else if(intrp == "rot_SLERP"){
+					if (intrp == "rot_SLERP_CU"){
+						Utils.quatNormalize(val_at_t, tmp_quat);
+					}
+				}else if(intrp == "rot_SLERP_LIN"){
 					// When targeting a rotation, spherical linear interpolation (slerp) should be used to interpolate quaternions.
+					// trace("DBG: lerping LINEAR rotation FROM", ch_idx-1, Utils.quat2eulerDeg(smp[ch_idx-1].output));
+					// trace("//", smp[ch_idx-1].output);
 					val_at_t = Utils.quatSlerp(smp[ch_idx-1].output, smp[ch_idx].output, t, tmp_quat);
+					Utils.quatNormalize(val_at_t, tmp_quat);
 				}else{
 					// "STEP"/unknown
 					// Copy not needed
@@ -679,19 +686,7 @@ class PFFScene {
 				// 	// if( rad_diff < 0 && Math.abs( eulerXYZ0[kMetersXYZ_freeAxis]+Math.PI*2.0 - eulerXYZ1[kMetersXYZ_freeAxis] ) < 
 				// 	Utils.vec2vecLerped(eulerXYZ0, eulerXYZ1, t, val_at_t);
 				// }
-				// else if(intrp == "rot_CUBICEULER"){
-				// 	// Lerping via shortest angle - as in Blender
-				// 	var vk0 = smp[ch_idx-1].output;
-				// 	var vk1 = smp[ch_idx].output;
-				// 	// Utils.quatNormalize(vk0, vk0);
-				// 	// Utils.quatNormalize(vk1, vk1);
-				// 	var eulerXYZ0 = Utils.quat2euler(vk0);
-				// 	var eulerXYZ1 = Utils.quat2euler(vk1);
-				// 	trace("rot_CUBICEULER", ch_idx, t, (-1*eulerXYZ0[kMetersXYZ_freeAxis]/Math.PI*180.0), (-1*eulerXYZ1[kMetersXYZ_freeAxis]/Math.PI*180.0) );
-				// 	// trace("//", haxe.Json.stringify(eulerXYZ0), haxe.Json.stringify(eulerXYZ1));
-				// 	trace("//", haxe.Json.stringify(vk0), haxe.Json.stringify(vk1));
-				// 	Utils.vec2vecLerped(eulerXYZ0, eulerXYZ1, t, val_at_t);
-				// }
+
 				// val_at_t should not be modified, can be original vector...
 				var cn_node = nodes_list[ch.node.id];
 				affectedNodes[cn_node.gltf_id] = cn_node;
@@ -715,7 +710,6 @@ class PFFScene {
 					// 	rotation = -1 * val_at_t[kMetersXYZ_freeAxis];
 					// }else{
 					// val_at_t = Regular quat
-					Utils.quatNormalize(val_at_t, tmp_quat);
 					var trs_rotation_eulerXYZ = Utils.quat2euler(tmp_quat);
 					rotation = kMetersXYZ_to_Rotation * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 					if(infl < 1.0){
