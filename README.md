@@ -10,12 +10,12 @@
 
 # Blender setup details
 - Recognizable objects: Empties for grouping and simple Mesh objects (quad, 4-vert plane) for starling sprites
-- Empties && Quads must be arranged in Blender XY-plane (for top-down view)
+- Empties && Quads must be arranged in Blender XZ-plane (for front view). Y is used for "depth" for GLTF
   - In world coords, root empty should not have any rotations/scales
 - Quads may have unlit textures - quad material image applied as Texture for corresponding starling node (by default)
 - Quad can have axis-aligned offset from object origin - offset converted to Sprite pivot (by default)
 - Quad/Empty can have custom props - they are loaded and can be used for customizing starling node creation
-- Quad/Empty loc.Z define draw order fro same-level elements, for Starling playback.
+- Quad/Empty loc.Y define draw order fro same-level elements, for Starling playback.
   - Draw order fixed by scene basic (not animated) state
 - Animations: Armature animations are not supported directly - can be baked on valid objects before export
 - Animations: Actions must be stashed (Dopesheet-Action Editor) or pushed to NLA track (NLA Editor)
@@ -27,8 +27,8 @@
 # Alpha && Clipping animation conventions
 
 gLTF does not support non-TRS animation targets. So some extra efforts required to make it happen with Blender && gLTF.
-1) Basic alpha derived from node's Scale Z (Blender z-axis), since it's not used for 2D scaling and defaults to 1.0. Named `alpha_self` in hx
-- Material nodes with such alpha support [here](demo/demo_art/blender_mat_ScaleZ_as_alpha.png)
+1) Basic alpha derived from node's Scale Y (Blender Y-axis), since it's not used for 2D scaling and defaults to 1.0. Named `alpha_self` in hx
+- Material nodes with such alpha support [here](demo/demo_art/blender_mat_ScaleY_as_alpha.png)
 2) Animated clipping: some Nodes are served as "placeholders" for holding such animations.
 - Each Empty can contain Plane (quad) Mesh object with the name "#pff:mask". Such object have special meaning for animation in Starling
 - Plane (Quad) rectangle = clipping rect for parent DisplayObjectContainer
