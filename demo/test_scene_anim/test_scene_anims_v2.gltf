@@ -355,9 +355,9 @@
 			"mesh":10,
 			"name":"lin2",
 			"scale":[
-				0.642666757106781,
-				0.642666757106781,
-				0.642666757106781
+				0.5853206515312195,
+				0.5853206515312195,
+				0.5853206515312195
 			],
 			"translation":[
 				0,
@@ -432,7 +432,19 @@
 					378,
 					100
 				],
-				"#pff:layer":"grp_trs_misc_jelem2"
+				"#pff:layer":"grp_trs_misc_jelem2",
+				"#sys:state:tmp":[
+					-4.099999904632568,
+					-0.01666666753590107,
+					4.590000152587891,
+					0.0,
+					-0.0,
+					0.0,
+					1.0,
+					1.0,
+					1.0,
+					0.0
+				]
 			},
 			"mesh":12,
 			"name":"jelem2",
@@ -783,6 +795,142 @@
 					"input":46,
 					"interpolation":"LINEAR",
 					"output":48
+				}
+			]
+		},
+		{
+			"channels":[
+				{
+					"sampler":0,
+					"target":{
+						"node":14,
+						"path":"translation"
+					}
+				},
+				{
+					"sampler":1,
+					"target":{
+						"node":14,
+						"path":"scale"
+					}
+				}
+			],
+			"name":"lin1Action",
+			"samplers":[
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":49
+				},
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":50
+				}
+			]
+		},
+		{
+			"channels":[
+				{
+					"sampler":0,
+					"target":{
+						"node":15,
+						"path":"translation"
+					}
+				},
+				{
+					"sampler":1,
+					"target":{
+						"node":15,
+						"path":"scale"
+					}
+				}
+			],
+			"name":"lin2Action",
+			"samplers":[
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":51
+				},
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":52
+				}
+			]
+		},
+		{
+			"channels":[
+				{
+					"sampler":0,
+					"target":{
+						"node":18,
+						"path":"translation"
+					}
+				},
+				{
+					"sampler":1,
+					"target":{
+						"node":18,
+						"path":"rotation"
+					}
+				},
+				{
+					"sampler":2,
+					"target":{
+						"node":18,
+						"path":"scale"
+					}
+				}
+			],
+			"name":"jelem1Action",
+			"samplers":[
+				{
+					"input":53,
+					"interpolation":"CUBICSPLINE",
+					"output":54
+				},
+				{
+					"input":53,
+					"interpolation":"CUBICSPLINE",
+					"output":55
+				},
+				{
+					"input":53,
+					"interpolation":"CUBICSPLINE",
+					"output":56
+				}
+			]
+		},
+		{
+			"channels":[
+				{
+					"sampler":0,
+					"target":{
+						"node":19,
+						"path":"translation"
+					}
+				},
+				{
+					"sampler":1,
+					"target":{
+						"node":19,
+						"path":"scale"
+					}
+				}
+			],
+			"name":"jelem2Action",
+			"samplers":[
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":57
+				},
+				{
+					"input":41,
+					"interpolation":"CUBICSPLINE",
+					"output":58
 				}
 			]
 		}
@@ -2004,6 +2152,72 @@
 			"componentType":5126,
 			"count":5,
 			"type":"VEC4"
+		},
+		{
+			"bufferView":49,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":50,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":51,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":52,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":53,
+			"componentType":5126,
+			"count":4,
+			"max":[
+				1.6666666666666667
+			],
+			"min":[
+				0.041666666666666664
+			],
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":54,
+			"componentType":5126,
+			"count":12,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":55,
+			"componentType":5126,
+			"count":12,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":56,
+			"componentType":5126,
+			"count":12,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":57,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":58,
+			"componentType":5126,
+			"count":9,
+			"type":"VEC3"
 		}
 	],
 	"bufferViews":[
@@ -2292,6 +2506,56 @@
 			"buffer":0,
 			"byteLength":80,
 			"byteOffset":2372
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":2452
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":2560
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":2668
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":2776
+		},
+		{
+			"buffer":0,
+			"byteLength":16,
+			"byteOffset":2884
+		},
+		{
+			"buffer":0,
+			"byteLength":144,
+			"byteOffset":2900
+		},
+		{
+			"buffer":0,
+			"byteLength":192,
+			"byteOffset":3044
+		},
+		{
+			"buffer":0,
+			"byteLength":144,
+			"byteOffset":3236
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":3380
+		},
+		{
+			"buffer":0,
+			"byteLength":108,
+			"byteOffset":3488
 		}
 	],
 	"samplers":[
@@ -2302,7 +2566,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":2452,
+			"byteLength":3596,
 			"uri":"test_scene_anims_v2.bin"
 		}
 	]
