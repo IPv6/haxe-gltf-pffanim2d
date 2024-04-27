@@ -49,16 +49,16 @@ class PFFScene {
 	// Blindness conversion between gLTF translations/locations and pixels
 	public var kPixels2D_to_Meters3D_ratio = 0.01;
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
-	// Y-up. px_x = loc[0], px_y = loc[2]
-	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];
-	public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0];
-	public var kMetersXYZ_to_ZOrder:Float = -10.0;// Blender -Y
-	public var kMetersXYZ_to_Rotation:Float = 1.0;
+	// // Y-up. px_x = loc[0], px_y = loc[2]
+	// public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];
+	// public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0];
+	// public var kMetersXYZ_to_ZOrder:Float = -10.0;// Blender -Y
+	// public var kMetersXYZ_to_Rotation:Float = 1.0;
 	// Z-up. px_x = loc[0], px_y = loc[1]
-	// public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,1];
-	// public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0,1.0];
-	// public var kMetersXYZ_to_ZOrder:Float = 10.0;// Blender +Z
-	// public var kMetersXYZ_to_Rotation:Float = -1.0;
+	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,1];
+	public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0,1.0];
+	public var kMetersXYZ_to_ZOrder:Float = 10.0;// Blender +Z
+	public var kMetersXYZ_to_Rotation:Float = -1.0;
 	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
 	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask. Can be "#pff:mask.001" (Blender specifics) as well, etc
 	var tmp_vec = new Utils.VectorF(3);

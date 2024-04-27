@@ -107,11 +107,13 @@ class Boot extends openfl.display.Sprite
 		// var bg_tex = _assets.getTexture("bg.jpg");
 		// var bg_img:starling.display.Image = new starling.display.Image(bg_tex);
 		// _root.addChild(bg_img);
+		var test_anims = 0;
 
 		// test_scene_static, test_scene_anim: GLTF LOADING
 		// Folder used for test in project.xml - assets
+		var asset_obj = _assets.getObject("root_ww1920_hh1080.gltf");
 		// var asset_obj = _assets.getObject("test_scene_static_v2.gltf");
-		var asset_obj = _assets.getObject("test_scene_anims_v2.gltf");
+		// var asset_obj = _assets.getObject("test_scene_anims_v2.gltf");test_anims=2;
 		// var asset_ba = _assets.getByteArray("root.gltf");
 		// var asset_raw:String = asset_ba.readUTFBytes(asset_ba.length);
 		var gltf_res:Utils.MapS2A = new Utils.MapS2A();
@@ -165,34 +167,39 @@ class Boot extends openfl.display.Sprite
 			}
 		}, 3.0);
 
-		// // test_scene_anim: direct apply animations at different times
-		// var allAnims = gscene.filterAnimsByName(["*"]);
-		// var allAnimStates:Array<PFFAnimState> = [];
-		// for (an in allAnims){
-		// 	var ans:PFFAnimState = new PFFAnimState(an, 0, 1);
-		// 	allAnimStates.push(ans);
-		// }
-		// var animTime = 0.0;
-		// Starling.current.juggler.repeatCall(()-> {
-		// 	for (ans in allAnimStates){
-		// 		ans.gltfTime = animTime;
-		// 	}
-		// 	gscene.applyAnimations(allAnimStates);
-		// 	animTime = (animTime+0.03)%2.0;
-		// }, 0.1);
-
-		// test_scene_anim: animation manager with meta-timeline
-		var anims = new PFFAnimManager(gscene);
-		// var timeline = PFFTimeline.makeTimelinePingPong();
-		// var timeline = PFFTimeline.makeTimelinePlayAndStop();
-		var timeline = PFFTimeline.makeTimelinePlayAndWrap();
-		anims.playAnimsByName(["*"], timeline);
-		// After 10sec stopping all anims
-		Starling.current.juggler.delayCall(()-> {
-			var stop_action = TimelineAction.STOP_SMOOTH(1.0);
-			// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
-			// var stop_action = TimelineAction.FADE_OUT(1.0);
-			anims.activateAction(stop_action, timeline);
-		}, 10.0);
+		if(test_anims>0){
+			if(test_anims == 1){
+				// test_scene_anim: direct apply animations at different times
+				var allAnims = gscene.filterAnimsByName(["*"]);
+				var allAnimStates:Array<PFFAnimState> = [];
+				for (an in allAnims){
+					var ans:PFFAnimState = new PFFAnimState(an, 0, 1);
+					allAnimStates.push(ans);
+				}
+				var animTime = 0.0;
+				Starling.current.juggler.repeatCall(()-> {
+					for (ans in allAnimStates){
+						ans.gltfTime = animTime;
+					}
+					gscene.applyAnimations(allAnimStates);
+					animTime = (animTime+0.03)%2.0;
+				}, 0.1);
+			}
+			if(test_anims == 2){
+				// test_scene_anim: animation manager with meta-timeline
+				var anims = new PFFAnimManager(gscene);
+				// var timeline = PFFTimeline.makeTimelinePingPong();
+				// var timeline = PFFTimeline.makeTimelinePlayAndStop();
+				var timeline = PFFTimeline.makeTimelinePlayAndWrap();
+				anims.playAnimsByName(["*"], timeline);
+				// After 10sec stopping all anims
+				Starling.current.juggler.delayCall(()-> {
+					var stop_action = TimelineAction.STOP_SMOOTH(1.0);
+					// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
+					// var stop_action = TimelineAction.FADE_OUT(1.0);
+					anims.activateAction(stop_action, timeline);
+				}, 10.0);
+			}
+		}
 	}
 }
