@@ -51,10 +51,14 @@ class PFFScene {
 	public var kMeters3D_to_Pixels2D_ratio = 1.0/0.01;
 	// Y-up. px_x = loc[0], px_y = loc[2]
 	public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,2];
-	public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,1.0];
+	public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0];
+	public var kMetersXYZ_to_ZOrder:Float = -10.0;// Blender -Y
+	public var kMetersXYZ_to_Rotation:Float = 1.0;
 	// Z-up. px_x = loc[0], px_y = loc[1]
 	// public var kMetersXYZ_to_PixelsXY:Utils.ArrayI = [0,1];
-	// public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0];
+	// public var kMetersXYZ_to_PixelsXY_scale:Utils.ArrayF = [1.0,-1.0,1.0];
+	// public var kMetersXYZ_to_ZOrder:Float = 10.0;// Blender +Z
+	// public var kMetersXYZ_to_Rotation:Float = -1.0;
 	public var kMetersXYZ_freeAxis = -1;// 2D-Rotation axis, Self-alpha axis on Scale, depends on kMetersXYZ_to_PixelsXY
 	public var kPffMask_nodename = "#pff:mask";// Name of the node interpreted as a mask. Can be "#pff:mask.001" (Blender specifics) as well, etc
 	var tmp_vec = new Utils.VectorF(3);
@@ -122,7 +126,7 @@ class PFFScene {
 		for(nd in gltf_struct.nodes){
 			var name = nd.name;
 			var trs_location_px = Utils.vec2vecScaled(nd.translation, kMeters3D_to_Pixels2D_ratio, tmp_vec).toArray();
-			var trs_scale = Utils.vec2vecScaled(nd.scale,1.0, tmp_vec).toArray();
+			var trs_scale = Utils.vec2vecScaled(nd.scale, 1.0, tmp_vec).toArray();
 			var trs_rotation_eulerXYZ = Utils.quat2euler(nd.rotation);
 			var bbox_px:Utils.ArrayF = null;
 			var texture:Texture = null;
@@ -164,20 +168,20 @@ class PFFScene {
 			starling_node.full_path = nd.name;// Basic default, no hier
 			starling_node.gltf_id = nd.id;
 			starling_node.customprops = customprops;
-			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis];
-			// log_i('creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${customprops}');
+			starling_node.z_order = trs_location_px[kMetersXYZ_freeAxis] * kMetersXYZ_to_ZOrder;
+			// log_i('DBG: creating node: ${nd.name}, ${texture}, ${trs_location_px}, ${trs_scale}, ${trs_rotation_eulerXYZ}, ${bbox_px}, ${starling_node.z_order} ${customprops}');
 			if(nd.name.indexOf(kPffMask_nodename) >= 0){
 				// Special case for kPffMask_nodename
 				if(bbox_px != null){
 					var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 					starling_node.props = spr_props;
-					if(spr_props.bbox_w>0 &&  spr_props.bbox_h>0){
+					if(spr_props.bbox_w > 0 &&  spr_props.bbox_h > 0){
 						var defl_quad = new starling.display.Quad(spr_props.bbox_w, spr_props.bbox_h);
 						Utils.undumpSprite(defl_quad, spr_props);
 						defl_quad.name = nd.name;
 						starling_node.sprite = defl_quad;
 					}else{
-						log_e('Skipping zero-sized node: ${nd.name}');
+						log_e('Skipping zero-sized mask node: ${nd.name}');
 					}
 				}
 			}else{
@@ -190,7 +194,7 @@ class PFFScene {
 			nodes_list.push(starling_node);
 		}
 
-		// Second pass - Setup hierarchy && detecti gltf_root
+		// Second pass - Setup hierarchy && detecting gltf_root
 		// - gltf_root = first node with NO PARENTS
 		for ( i in 0...(nodes_list.length) ){
 			var starling_node = nodes_list[i];
@@ -201,11 +205,11 @@ class PFFScene {
 			var gltf_node = gltf_struct.nodes[i];// starling_node.gltf_id
 			if(gltf_node.children != null && gltf_node.children.length > 0 && node_sprite != null){
 				var child_order = gltf_node.children.toArray();
-				// Sorting according to child node location Z-compinent
+				// Sorting according to child node z_order
 				// Critical for rendering order on the same hierarchy level
 				child_order.sort( (nd1, nd2) -> {
-					var  nd1_s = nodes_list[nd1.id];
-					var  nd2_s = nodes_list[nd2.id];
+					var nd1_s = nodes_list[nd1.id];
+					var nd2_s = nodes_list[nd2.id];
 					return Utils.intSign(nd1_s.z_order - nd2_s.z_order);
 				} );
 				for ( j in 0...(child_order.length) ){
@@ -216,6 +220,7 @@ class PFFScene {
 					var child_starling_node = nodes_list[child_id];
 					var child_gltf_node = gltf_struct.nodes[child_id];
 					child_starling_node.gltf_parent_id = starling_node.gltf_id;
+					// log_i('DBG: adding node (z-ordered) ${child_starling_node.full_path} ${child_starling_node.z_order} ${child_starling_node}');
 					if(child_gltf_node.name.indexOf(kPffMask_nodename) >= 0){
 						// Special case: quad mask
 						// trace("- adding MASK", node_sprite, child_starling_node.sprite);
@@ -351,7 +356,7 @@ class PFFScene {
 		var pos_y:Float = trs_location_px[kMetersXYZ_to_PixelsXY[1]]*kMetersXYZ_to_PixelsXY_scale[1];
 		var scale_x:Float = trs_scale[kMetersXYZ_to_PixelsXY[0]];
 		var scale_y:Float = trs_scale[kMetersXYZ_to_PixelsXY[1]];
-		var rotation:Float = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
+		var rotation:Float = kMetersXYZ_to_Rotation * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 		var bbox_min_x:Float = 0;
 		var bbox_min_y:Float = 0;
 		var bbox_max_x:Float = 0;
@@ -383,6 +388,7 @@ class PFFScene {
 	**/
 	public function fillStarlingNode(starling_node:PFFNodeState, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
+		// log_i('DBG: fillStarlingNode ${node_name} props: ${spr_props}');
 		starling_node.props = spr_props;
 		var defl_spr = new starling.display.Sprite();
 		if(bbox_px != null){
@@ -711,7 +717,7 @@ class PFFScene {
 					// val_at_t = Regular quat
 					Utils.quatNormalize(val_at_t, tmp_quat);
 					var trs_rotation_eulerXYZ = Utils.quat2euler(tmp_quat);
-					rotation = -1 * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
+					rotation = kMetersXYZ_to_Rotation * trs_rotation_eulerXYZ[kMetersXYZ_freeAxis];
 					if(infl < 1.0){
 						cn_node.props.rotation = Utils.f2fLerped(cn_node.props.rotation,rotation,infl);
 					}else{

@@ -108,8 +108,9 @@ class Boot extends openfl.display.Sprite
 		// var bg_img:starling.display.Image = new starling.display.Image(bg_tex);
 		// _root.addChild(bg_img);
 
-		// GLTF MENUTEST
-		var asset_obj = _assets.getObject("test_scene_anims.gltf");
+		// test_scene_static, test_scene_anim: GLTF LOADING
+		// Folder used for test in project.xml - assets
+		var asset_obj = _assets.getObject("test_scene.gltf");
 		// var asset_ba = _assets.getByteArray("root.gltf");
 		// var asset_raw:String = asset_ba.readUTFBytes(asset_ba.length);
 		var gltf_res:Utils.MapS2A = new Utils.MapS2A();
@@ -149,7 +150,7 @@ class Boot extends openfl.display.Sprite
 		gltf_root.y = _starling.stage.stageHeight * 0.5;
 		_root.addChild(gltf_root);
 
-		// Test: compositions switch
+		// test_scene_static, test_scene_anim: Test: compositions switch
 		var activeUI = 1;
 		gscene.addComposition("ui1",["ui1"],["ui2"]);
 		gscene.addComposition("ui2",["ui2"],["ui1"]);
@@ -162,35 +163,37 @@ class Boot extends openfl.display.Sprite
 				gscene.activateComposition("ui2");
 			}
 		}, 3.0);
-		// Test: direct apply animations
-		// // var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
-		// // var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
-		// // var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
-		// var allAnims = gscene.filterAnimsByName(["*"]);
-		// var allAnimStates:Array<PFFAnimState> = [];
-		// for (an in allAnims){
-		// 	var ans:PFFAnimState = new PFFAnimState(an, 0, 1);
-		// 	allAnimStates.push(ans);
-		// }
-		// var animTime = 0.0;
-		// Starling.current.juggler.repeatCall(()-> {
-		// 	for (ans in allAnimStates){
-		// 		ans.gltfTime = animTime;
-		// 	}
-		// 	gscene.applyAnimations(allAnimStates);
-		// 	animTime = (animTime+0.03)%2.0;
-		// }, 0.1);
-		// Test: animation manager with meta-timeline
-		var anims = new PFFAnimManager(gscene);
-		// var timeline = PFFTimeline.makeTimelinePlayAndStop();
-		// var timeline = PFFTimeline.makeTimelinePlayAndWrap();
-		var timeline = PFFTimeline.makeTimelinePingPong();
-		anims.playAnimsByName(["*"], timeline);
-		Starling.current.juggler.delayCall(()-> {
-			var stop_action = TimelineAction.STOP_SMOOTH(1.0);
-			// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
-			// var stop_action = TimelineAction.FADE_OUT(1.0);
-			anims.activateAction(stop_action, timeline);
-		}, 10.0);
+
+		// // test_scene_anim: direct apply animations
+		// // // var allAnims = gscene.filterAnimsByName(["jelem2Action"]);
+		// // // var allAnims = gscene.filterAnimsByName(["tx_rota_0"], true);
+		// // // var allAnims = gscene.filterAnimsByName(["tx_rota_1"], true);
+		// // var allAnims = gscene.filterAnimsByName(["*"]);
+		// // var allAnimStates:Array<PFFAnimState> = [];
+		// // for (an in allAnims){
+		// // 	var ans:PFFAnimState = new PFFAnimState(an, 0, 1);
+		// // 	allAnimStates.push(ans);
+		// // }
+		// // var animTime = 0.0;
+		// // Starling.current.juggler.repeatCall(()-> {
+		// // 	for (ans in allAnimStates){
+		// // 		ans.gltfTime = animTime;
+		// // 	}
+		// // 	gscene.applyAnimations(allAnimStates);
+		// // 	animTime = (animTime+0.03)%2.0;
+		// // }, 0.1);
+
+		// // test_scene_anim: animation manager with meta-timeline
+		// var anims = new PFFAnimManager(gscene);
+		// // var timeline = PFFTimeline.makeTimelinePlayAndStop();
+		// // var timeline = PFFTimeline.makeTimelinePlayAndWrap();
+		// var timeline = PFFTimeline.makeTimelinePingPong();
+		// anims.playAnimsByName(["*"], timeline);
+		// Starling.current.juggler.delayCall(()-> {
+		// 	var stop_action = TimelineAction.STOP_SMOOTH(1.0);
+		// 	// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
+		// 	// var stop_action = TimelineAction.FADE_OUT(1.0);
+		// 	anims.activateAction(stop_action, timeline);
+		// }, 10.0);
 	}
 }

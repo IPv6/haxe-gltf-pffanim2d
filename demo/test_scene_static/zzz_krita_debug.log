@@ -1,0 +1,7 @@
+2024-04-27 17:30:05: - Action "wplstudio.action_wlaExports"
+2024-04-27 17:30:05: - layer 'demo'  "grouplayer-RGBA/U8"
+2024-04-27 17:30:05: - exporting GLTF "demo" "/Users/ipv6/Downloads/demo/root_ww1920_hh1080.gltf"
+2024-04-27 17:30:05: - "wplstudio.action_wlaExports" "updating dirty layers" 0
+2024-04-27 17:30:05: - "wplstudio.action_wlaExports done"
+2024-04-27 17:30:05: // "0.17 sec"
+2024-04-27 17:30:05: - alert "Done! GLTF layers saved: 31"

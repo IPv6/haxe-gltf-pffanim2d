@@ -24,7 +24,7 @@
 	<window width="1920" height="1080" orientation="landscape" background="0x000000" />
 	<window depth-buffer="true" stencil-buffer="true" fps="60" hardware="true" vsync="true" />
 	<window resizable="true"/>
-	<assets path="test_scene" include="*.*" embed="false" />
+	<assets path="test_scene_static" include="*.*" embed="false" />
 	
 	<haxedef name="haxeJSON"/>
 	<haxelib name="starling" />

@@ -10,7 +10,7 @@
 
 # Blender setup details
 - Recognizable objects: Empties for grouping and simple Mesh objects (quad, 4-vert plane) for starling sprites
-- Empties && Quads must be arranged in Blender XZ-plane (for front view). Y is used for "depth" for GLTF
+- Empties && Quads arrangement: Blender XZ-plane (for front view). Y is used for "depth" for GLTF (-Y defines rendering order)
   - In world coords, root empty should not have any rotations/scales
 - Quads may have unlit textures - quad material image applied as Texture for corresponding starling node (by default)
 - Quad can have axis-aligned offset from object origin - offset converted to Sprite pivot (by default)
