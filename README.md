@@ -10,18 +10,18 @@
 
 # Blender setup details
 - Recognizable objects: Empties for grouping and simple Mesh objects (quad, 4-vert plane) for starling sprites
-- Empties && Quads arrangement: Blender XZ-plane (for front view). Y is used for "depth" for GLTF (-Y defines rendering order)
+- Empties && Quads arrangement: Blender XZ-plane (for front view). Y is used as "depth" (-Y defines rendering order)
   - In world coords, root empty should not have any rotations/scales
-- Quads may have unlit textures - quad material image applied as Texture for corresponding starling node (by default)
-- Quad can have axis-aligned offset from object origin - offset converted to Sprite pivot (by default)
-- Quad/Empty can have custom props - they are loaded and can be used for customizing starling node creation
-- Quad/Empty loc.Y define draw order fro same-level elements, for Starling playback.
+- Textures: Quads should have unlit textures - quad material image used for corresponding starling node (by default)
+- Pivot: Quad can have axis-aligned offset from object origin, offset converted to Sprite pivot (by default)
+- CustomProps: Quad/Empty can have custom props, they are loaded and can be used for customizing starling node creation/custom logic
+- Z-Order: Quad/Empty loc.Y define draw order (in Starling) for same-level elements.
   - Draw order fixed by scene basic (not animated) state
-- Animations: Armature animations are not supported directly - can be baked on valid objects before export
 - Animations: Actions must be stashed (Dopesheet-Action Editor) or pushed to NLA track (NLA Editor)
   - Export name will be the name of the action in both cases
 - Animations: Actions must always have frame 0 keyed
   - gLTF 'Actions' exporter resets any timeline offset anyway
+- Animations: Armature animations are not supported directly - they need to be baked on valid objects before export
 - Blender export options: `Format: gLTF Separate`, `Include: Selected Objects, Custom Properties`, `Transform: Y Up: Off`, `Data: Mesh: UVs`, `Material: Export`, `Shape Keys: Off`, `Skinning: Off`, `Lighting: Unitless`, `Animation: On`, `Animation: Mode: Actions`, `Animation: Sample Animations: Off`
 
 # Alpha && Clipping animation conventions
