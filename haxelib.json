@@ -1,10 +1,10 @@
 {
   "name": "gltf-starling-anim2d",
   "classPath": "src",
-  "url" : "https://github.com/IPv6/haxe-gltf-starling-anim2d",
-  "license": "Apache",
+  "url" : "https://github.com/IPv6/haxe-gltf-pffanim2d",
+  "license": "MIT",
   "tags": ["cross", "utility"],
-  "description": "A Haxe library for using glTF 2.0 with Starling",
+  "description": "A Haxe library for playing simple animations in gLTF format. For OpenGL/Starling",
   "version": "2.1.0",
   "releasenote": "",
   "contributors": ["IPv6"],
