@@ -569,18 +569,15 @@ class PFFScene {
 	}
 
 	// ===============
-	public function filterAnimsByName(full_paths:Utils.ArrayS, fuzzy_search:Bool = false):Array<PFFAnimProps> {
+	public function filterAnimsByName(full_paths:Utils.ArrayS):Array<PFFAnimProps> {
+		// Fuzzy matching with "*" (start/end only)
 		var res:Array<PFFAnimProps> = [];
 		if(Utils.safeLen(full_paths) == 0 || gltf_struct == null || gltf_struct.animations == null){
 			return res;
 		}
 		for(nd in animstates_list){
 			for(fp in full_paths){
-				if(fp == "*"){
-					res.push(nd);
-				}else if(nd.full_path == fp){
-					res.push(nd);
-				} if(fuzzy_search && nd.full_path.indexOf(fp) >= 0){
+				if(Utils.strIsEqual(fp, nd.full_path, false, true)){
 					res.push(nd);
 				}
 			}

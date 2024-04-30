@@ -406,4 +406,32 @@ class Utils {
 		}
 		return -1; // Never
 	}
+
+	static public function strIsEqual(str1:String, str2:String, ignoreCase:Bool = false, checkSpecialChars:Bool = false): Bool {
+		if(str1 == null){
+			str1="";
+		}
+		if(str2 == null){
+			str2="";
+		}
+		if(ignoreCase){
+			str1 = str1.toLowerCase();
+			str2 = str2.toLowerCase();
+		}
+		if(str1 == str2){
+			return true;
+		}
+		if(checkSpecialChars && str1.length > 0){
+			if(str1 == "*" && str2.length > 0){
+				return true;
+			}
+			if(str1.charAt(0) == "*" && StringTools.endsWith(str2, str1.substr(1))){
+				return true;
+			}
+			if(str1.charAt(str1.length-1) == "*" && StringTools.startsWith(str2, str1.substr(0, str1.length-2))){
+				return true;
+			}
+		}
+		return false;
+	}
 }

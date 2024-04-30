@@ -47,7 +47,7 @@ gLTF does not support non-TRS animation targets. So some extra efforts required 
 - [x] Done: Base64 in buffers URIs
 - [x] Done: Respect nodes z-order for starling sprites layout
 - [ ] Not supported, not planned: bones/armatures/skinning, shapekeys/morth targets, cameras, etc etc
-  - Spne 4.2+ is better for this, https://github.com/EsotericSoftware/spine-runtimes/tree/4.2/spine-haxe
+  - Spine better suited for this, https://github.com/EsotericSoftware/spine-runtimes/
 
 # Run demo
 

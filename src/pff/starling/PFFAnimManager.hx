@@ -73,6 +73,7 @@ class PFFAnimState {
 * - normalized time (0.0 = animation start, 1.0 = animation end)
 * - animation speed, possibility to "revert" animation
 * - meta timelines with "events" and "commands" - can be used to make "ping-pong","loop" and other time behaviour customization
+* - named animations/timelines: "*" at start/end can be used to perform fuzzy matching with animation/timeline names
 **/
 class PFFAnimManager implements IAnimatable {
 	public var scene:PFFScene;
@@ -82,7 +83,7 @@ class PFFAnimManager implements IAnimatable {
 		scene = pffsc;
 	};
 	public function playAnimsByName(names:Utils.ArrayS, withTimeline:PFFTimeline, activationOrder:TimelineActivationOrder = REPLACE):Bool {
-		var anims = scene.filterAnimsByName(names,false);
+		var anims = scene.filterAnimsByName(names);
 		if(anims.length == 0){
 			// no anims found, but probably just compositions
 			var compos = 0;
@@ -91,7 +92,7 @@ class PFFAnimManager implements IAnimatable {
 					compos++;
 				}
 			}
-			return compos>0;
+			return compos > 0;
 		}
 		withTimeline.setAnims(anims);
 		return playTimeline(withTimeline, activationOrder);
@@ -129,7 +130,7 @@ class PFFAnimManager implements IAnimatable {
 	}
 	public function findTimeline(tname:String): PFFTimeline {
 		for(ts in timelines){
-			if(ts.name == tname){
+			if(Utils.strIsEqual(tname, ts.name, false, true)){
 				return ts;
 			}
 		}
