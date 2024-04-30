@@ -48,7 +48,8 @@ class TimelineEvent {
 
 /**
 * PFFTimeline groups animations that share time scale and behaviour
-* Each PFFTimeline should have unique, PFFAnimManager can alter timeline behaviour by name
+* Each PFFTimeline name should have unique, PFFAnimManager can alter timeline behaviour by name
+* TimelineEvents can be used for "sequences" of animations (loop, ping-ping, etc)
 **/
 class PFFTimeline {
 	public var name:String = null;
