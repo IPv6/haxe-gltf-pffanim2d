@@ -189,7 +189,7 @@ class Boot extends openfl.display.Sprite
 				// var timeline = PFFTimeline.makeTimelinePlayAndStop();
 				var timeline = PFFTimeline.makeTimelinePlayAndWrap();
 				anims.playAnimsByName(["*"], timeline);
-				// After 10sec stopping all anims
+				// stopping all anims after 10 sec
 				Starling.current.juggler.delayCall(()-> {
 					var stop_action = TimelineAction.STOP_SMOOTH(1.0);
 					// FADE_OUT: Not really stopping, influence==0 -> apply with zero effect
