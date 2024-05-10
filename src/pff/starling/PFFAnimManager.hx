@@ -126,6 +126,9 @@ class PFFAnimManager implements IAnimatable {
 		if(juggler_id < 0){
 			juggler_id = Starling.current.juggler.add(this);
 		}
+		if(timeline.onBeforePlay != null){
+			timeline.onBeforePlay(timeline);
+		}
 		return true;
 	}
 	public function findTimeline(tname:String): PFFTimeline {
@@ -159,11 +162,11 @@ class PFFAnimManager implements IAnimatable {
 			if(triggeredEvent != null){
 				for(ev in triggeredEvent){
 					if(ev.event_timeline == null){
-						if(ev.last_triggered_at == null){
-							ev.last_triggered_at = ts;
+						if(ev.target_timeline == null){
+							ev.target_timeline = ts;
 						}
-					}else if(ev.last_triggered_at == null || ev.last_triggered_at.name != ev.event_timeline){
-						ev.last_triggered_at = findTimeline(ev.event_timeline);
+					}else if(ev.target_timeline == null || ev.target_timeline.name != ev.event_timeline){
+						ev.target_timeline = findTimeline(ev.event_timeline);
 					}
 					activeEvents.push(ev);
 				}
@@ -175,7 +178,7 @@ class PFFAnimManager implements IAnimatable {
 			}
 		}
 		for(ev in activeEvents){
-			activateAction(ev.event_action, ev.last_triggered_at);
+			activateAction(ev.event_action, ev.target_timeline);
 		}
 		if(activeAnims.length > 0){
 			scene.applyAnimations(activeAnims);
@@ -183,6 +186,11 @@ class PFFAnimManager implements IAnimatable {
 			scene.log_i("PFFAnimManager: Stopping, no active animations");
 			Starling.current.juggler.removeByID(juggler_id);
 			juggler_id = -1;
+		}
+		for(ev in activeEvents){
+			if(ev.target_timeline != null && ev.target_timeline.onEventTriggered != null){
+				ev.target_timeline.onEventTriggered(ev.target_timeline, ev);
+			}
 		}
 		activeAnims.resize(0);
 		activeEvents.resize(0);
@@ -198,6 +206,7 @@ class PFFAnimManager implements IAnimatable {
 		}
 		// scene.log_i('PFFAnimManager: Activating animation event: ${action}, ${target_timeline.name}');
 		switch (action) {
+			case PASS: {};
 			case STOP:
 				target_timeline.setTimeScale(0.0);
 			case SPEED(new_speed):

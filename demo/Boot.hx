@@ -107,7 +107,7 @@ class Boot extends openfl.display.Sprite
 		// var bg_tex = _assets.getTexture("bg.jpg");
 		// var bg_img:starling.display.Image = new starling.display.Image(bg_tex);
 		// _root.addChild(bg_img);
-		var test_anims = 2; // 0;
+		var test_anims = 2; // 0; #if test_anim test_anims = 2; #end
 		// test_scene_static, test_scene_anim: GLTF LOADING
 		// Folder used for test in project.xml - assets
 		var asset_obj = _assets.getObject("test_scene.gltf");
@@ -164,7 +164,7 @@ class Boot extends openfl.display.Sprite
 			}
 		}, 3.0);
 
-		if(test_anims>0){
+		if(test_anims > 0){
 			if(test_anims == 1){
 				// test_scene_anim: direct apply animations at different times
 				var allAnims = gscene.filterAnimsByName(["*"]);

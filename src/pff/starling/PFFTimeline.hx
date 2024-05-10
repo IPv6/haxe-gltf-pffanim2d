@@ -29,6 +29,7 @@ enum TimelineAction {
 	STOP_SMOOTH( fade_sec:Float );// Timeline timeScale ???->0.0
 	FADE_IN( fade_sec:Float );// Timeline influence 0->1
 	FADE_OUT( fade_sec:Float );// Timeline influence ???->0. Not a stopping action! zero influence == apply with zero effect, but time still go on
+	PASS; // Do nothing, can be used to triggering callbacks/etc
 }
 
 class TimelineEvent {
@@ -42,8 +43,10 @@ class TimelineEvent {
 	public var trigger_time_mode:TimelineTimeMode = GLTF_ONCE;
 	public var trigger_limit_by_direction:TimelineDirection = ANY;
 	public var event_action:TimelineAction = STOP;
-	public var event_timeline:String = null;
-	public var last_triggered_at:PFFTimeline = null;
+	public var event_timeline:String = null;// By default its timeline that holds event. But event can affect different timeline (by name)
+	public var event_payload:Any = null;// Anything (for triggerred event processing)
+
+	public var target_timeline:PFFTimeline = null;// Cached value of event timeline (found by name)
 }
 
 /**
@@ -61,6 +64,8 @@ class PFFTimeline {
 	public var influence:Float = 1.0;
 	public var gltfTimeMin:Float = -1.0;
 	public var gltfTimeMax:Float = -1.0;
+	public var onBeforePlay:(PFFTimeline)->Void = null;
+	public var onEventTriggered:(PFFTimeline, TimelineEvent)->Void = null;
 	public function new(tname:String = null){
 		static var tn_cnt = 0;
 		tn_cnt++;
@@ -76,7 +81,7 @@ class PFFTimeline {
 			animStates.push(ans);
 		}
 		this.anims = animStates;
-		// Must reset time ti initalize
+		// Must set time to initalize gltfMin/gltgMax
 		setTimeByRatio(0.0);
 		return true;
 	}
@@ -123,6 +128,7 @@ class PFFTimeline {
 	}
 	public function setTimeByRatio(normalizedTime:Float): Bool {
 		if(Utils.safeLen(anims) == 0){
+			// Timeline not attached to animation
 			// not possible to recalc in gltfTime
 			return false;
 		}
