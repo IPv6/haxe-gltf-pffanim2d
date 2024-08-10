@@ -182,20 +182,20 @@ class PFFTimeline {
 		return triggered_events;
 	}
 
-	public static function makeTimelinePlayAndPauseAt(time_fraction_from:Float, time_fraction_to:Float, speed:Float):PFFTimeline {
+	public static function makeTimelinePlayAndStopAt(time_ratio_from:Float, time_ratio_to:Float, speed:Float):PFFTimeline {
 		var res = new PFFTimeline();
-		if(time_fraction_from == time_fraction_to || speed == 0.0){
+		if(Math.abs(time_ratio_from - time_ratio_to) < Utils.GLM_EPSILON || Math.abs(speed) < Utils.GLM_EPSILON){
 			// Simple "jump to and stop"
 			res.onBeforePlay = function(tm:PFFTimeline){
-				tm.setTimeByRatio(time_fraction_from);
+				tm.setTimeByRatio(time_ratio_from);
 				tm.setTimeScale(0.0);
 			}
 		}else{
 			res.onBeforePlay = function(tm:PFFTimeline){
-				tm.setTimeByRatio(time_fraction_from);
+				tm.setTimeByRatio(time_ratio_from);
 				tm.setTimeScale(speed);
 			}
-			var stopAtTime = new TimelineEvent(time_fraction_to, RATIO, STOP);
+			var stopAtTime = new TimelineEvent(time_ratio_to, RATIO, STOP);
 			res.setEvents([stopAtTime]);
 		}
 		return res;
