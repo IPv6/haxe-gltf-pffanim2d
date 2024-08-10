@@ -182,6 +182,24 @@ class PFFTimeline {
 		return triggered_events;
 	}
 
+	public static function makeTimelinePlayAndPauseAt(time_fraction_from:Float, time_fraction_to:Float, speed:Float):PFFTimeline {
+		var res = new PFFTimeline();
+		if(time_fraction_from == time_fraction_to || speed == 0.0){
+			// Simple "jump to and stop"
+			res.onBeforePlay = function(tm:PFFTimeline){
+				tm.setTimeByRatio(time_fraction_from);
+				tm.setTimeScale(0.0);
+			}
+		}else{
+			res.onBeforePlay = function(tm:PFFTimeline){
+				tm.setTimeByRatio(time_fraction_from);
+				tm.setTimeScale(speed);
+			}
+			var stopAtTime = new TimelineEvent(time_fraction_to, RATIO, STOP);
+			res.setEvents([stopAtTime]);
+		}
+		return res;
+	}
 	public static function makeTimelinePlayAndStop():PFFTimeline {
 		var res = new PFFTimeline();
 		var stopAtEnd = new TimelineEvent(1.0, RATIO, STOP);
