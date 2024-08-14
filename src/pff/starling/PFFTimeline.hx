@@ -64,6 +64,7 @@ class PFFTimeline {
 	public var influence:Float = 1.0;
 	public var gltfTimeMin:Float = -1.0;
 	public var gltfTimeMax:Float = -1.0;
+	public var gltfUpdateRequired:Bool = false;
 	public var onBeforePlay:(PFFTimeline)->Void = null;
 	public var onEventTriggered:(PFFTimeline, TimelineEvent)->Void = null;
 	public function new(tname:String = null){
@@ -189,6 +190,10 @@ class PFFTimeline {
 			res.onBeforePlay = function(tm:PFFTimeline){
 				tm.setTimeByRatio(time_ratio_from);
 				tm.setTimeScale(0.0);
+				// scale=0.0 means timeline inactive
+				// forcing at least single update
+				// sprite tree must ve set according to timeline time of timeline animations
+				tm.gltfUpdateRequired = true;
 			}
 		}else{
 			res.onBeforePlay = function(tm:PFFTimeline){

@@ -171,7 +171,8 @@ class PFFAnimManager implements IAnimatable {
 					activeEvents.push(ev);
 				}
 			}
-			if(ts.isActive()){
+			if(ts.isActive() || ts.gltfUpdateRequired){
+				ts.gltfUpdateRequired = false;
 				for(an in ts.anims){
 					activeAnims.push(an);
 				}
