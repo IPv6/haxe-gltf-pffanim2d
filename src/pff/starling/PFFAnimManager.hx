@@ -212,12 +212,10 @@ class PFFAnimManager implements IAnimatable {
 				target_timeline.setTimeScale(0.0);
 			case SPEED(new_speed):
 				target_timeline.setTimeScale(new_speed);
-			case JUMP(to_time, time_mode):
-				if(time_mode == RATIO){
-					target_timeline.setTimeByRatio(to_time);
-				}else{
-					target_timeline.setTimeByGltfTime(to_time);
-				}
+			case JUMP_FRAC(to_time):
+				target_timeline.setTimeByRatio(to_time);
+			case JUMP_SEC(to_time):
+				target_timeline.setTimeByGltfTime(to_time);
 			case STOP_SMOOTH(fade_sec):
 				var tween = new Tween(target_timeline, fade_sec);
 				tween.animate("timeScale", 0.0);

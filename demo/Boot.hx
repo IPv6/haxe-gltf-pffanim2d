@@ -187,7 +187,7 @@ class Boot extends openfl.display.Sprite
 				var anims = new PFFAnimManager(gscene);
 				// var timeline = PFFTimeline.makeTimelinePingPong();
 				// var timeline = PFFTimeline.makeTimelinePlayAndStop();
-				var timeline = PFFTimeline.makeTimelinePlayAndWrap();
+				var timeline = PFFTimeline.makeTimelinePlayAndWrap(0.0);
 				anims.playAnimsByName(["*"], timeline);
 				// stopping all anims after 10 sec
 				Starling.current.juggler.delayCall(()-> {

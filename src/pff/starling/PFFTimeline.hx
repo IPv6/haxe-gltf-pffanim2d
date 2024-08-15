@@ -16,24 +16,25 @@ enum abstract TimelineDirection(Int) from Int to Int {
 }
 
 enum abstract TimelineTimeMode(Int) from Int to Int {
-	var GLTF = 1;
-	var RATIO;
-	var GLTF_ONCE;
-	var NEVER;
+	var GLTF_SEC = 1;// Triggers at exact gltf time
+	var RATIO;// Triggers and time as fraction of total duration (0-start,1-end)
+	var GLTF_ONCE;// Triggers on first occasion and then never
+	var NEVER;// Never triggers
 }
 
 enum TimelineAction {
 	STOP;// Timeline timeScale = 0, same as SPEED(0)
 	SPEED( new_speed:Float );// Timeline timeScale to any value
-	JUMP( to_time:Float, time_mode:TimelineTimeMode );
+	JUMP_FRAC( to_time:Float);
+	JUMP_SEC( to_time:Float);
 	STOP_SMOOTH( fade_sec:Float );// Timeline timeScale ???->0.0
 	FADE_IN( fade_sec:Float );// Timeline influence 0->1
 	FADE_OUT( fade_sec:Float );// Timeline influence ???->0. Not a stopping action! zero influence == apply with zero effect, but time still go on
-	PASS; // Do nothing, can be used to triggering callbacks/etc
+	PASS; // Do nothing, can be used to trigger callback/etc
 }
 
 class TimelineEvent {
-	public function new(on_time:Float, time_mode:TimelineTimeMode, action:TimelineAction, target:String = null){
+	public function new(on_time:Float, time_mode:TimelineTimeMode, action:TimelineAction, target:String){
 		trigger_time = on_time;
 		trigger_time_mode = time_mode;
 		event_action = action;
@@ -47,6 +48,13 @@ class TimelineEvent {
 	public var event_payload:Any = null;// Anything (for triggerred event processing)
 
 	public var target_timeline:PFFTimeline = null;// Cached value of event timeline (found by name)
+
+	public static function eventAtFrac(on_time_frac:Float, action:TimelineAction, target:String = null){
+		return new TimelineEvent(on_time_frac, RATIO, action, target );
+	}
+	public static function eventAtSec(on_time_sec:Float, action:TimelineAction, target:String = null){
+		return new TimelineEvent(on_time_sec, GLTF_SEC, action, target );
+	}
 }
 
 /**
@@ -160,7 +168,7 @@ class PFFTimeline {
 				if(ev.trigger_limit_by_direction == BACKWARD && delta_sec > 0.0){
 					continue;
 				}
-				var trigger_time = ev.trigger_time;
+				var trigger_time = ev.trigger_time;// GLTF_SEC
 				if(ev.trigger_time_mode	== RATIO){
 					trigger_time = getGltfTimeByRatio(ev.trigger_time);
 				}
@@ -200,28 +208,28 @@ class PFFTimeline {
 				tm.setTimeByRatio(time_ratio_from);
 				tm.setTimeScale(speed);
 			}
-			var stopAtTime = new TimelineEvent(time_ratio_to, RATIO, STOP);
+			var stopAtTime = TimelineEvent.eventAtFrac(time_ratio_to, STOP);
 			res.setEvents([stopAtTime]);
 		}
 		return res;
 	}
 	public static function makeTimelinePlayAndStop():PFFTimeline {
 		var res = new PFFTimeline();
-		var stopAtEnd = new TimelineEvent(1.0, RATIO, STOP);
+		var stopAtEnd = TimelineEvent.eventAtFrac(1.0, STOP);
 		res.setEvents([stopAtEnd]);
 		return res;
 	}
-	public static function makeTimelinePlayAndWrap():PFFTimeline {
+	public static function makeTimelinePlayAndWrap(time_ratio_wrap_to:Float):PFFTimeline {
 		var res = new PFFTimeline();
-		var wrapAtEnd = new TimelineEvent(1.0, RATIO, JUMP(0.0, RATIO));
+		var wrapAtEnd = TimelineEvent.eventAtFrac(1.0, JUMP_FRAC(time_ratio_wrap_to));
 		res.setEvents([wrapAtEnd]);
 		return res;
 	}
 	public static function makeTimelinePingPong():PFFTimeline {
 		var res = new PFFTimeline();
-		var toogleAtStart = new TimelineEvent(0.0, RATIO, SPEED(1.0));
+		var toogleAtStart = TimelineEvent.eventAtFrac(0.0, SPEED(1.0));
 		toogleAtStart.trigger_limit_by_direction = BACKWARD;
-		var toogleAtEnd = new TimelineEvent(1.0, RATIO, SPEED(-1.0));
+		var toogleAtEnd = TimelineEvent.eventAtFrac(1.0, SPEED(-1.0));
 		toogleAtEnd.trigger_limit_by_direction = FORWARD;
 		res.setEvents([toogleAtStart, toogleAtEnd]);
 		return res;
