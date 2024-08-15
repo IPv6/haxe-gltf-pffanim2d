@@ -18,6 +18,25 @@ class Texture {
         this.name = texture.name;
         if(texture.source != null) this.image = gltf.images[texture.source];
         if(texture.sampler != null) this.sampler = gltf.samplers[texture.sampler];
+        if(texture.source == null){
+            // Checking for possible webp extension
+            // {
+            //     "extensions":{
+            //         "EXT_texture_webp":{
+            //             "source":0
+            //         }
+            //     },
+            //     "sampler":0
+            // }, 
+            if(texture.extensions != null){
+                if(texture.extensions?.EXT_texture_webp?.source != null){
+                    var source = texture.extensions?.EXT_texture_webp?.source;
+                    if (Std.isOfType(source, Int)){
+                        this.image = gltf.images[source];
+                    }
+                }
+            }
+        }
     }
 
     static function loadFromRaw(gltf:GLTF, raw:TGLTF):Vector<Texture> {

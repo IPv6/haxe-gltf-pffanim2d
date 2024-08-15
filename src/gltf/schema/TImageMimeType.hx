@@ -6,4 +6,5 @@ package gltf.schema;
 enum abstract TImageMimeType(String) from String to String {
     var JPEG = "image/jpeg";
     var PNG = "image/png";
+    var WEBP = "image/webp";
 }
