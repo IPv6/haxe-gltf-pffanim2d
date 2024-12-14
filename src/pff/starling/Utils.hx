@@ -428,7 +428,7 @@ class Utils {
 			if(str1.charAt(0) == "*" && StringTools.endsWith(str2, str1.substr(1))){
 				return true;
 			}
-			if(str1.charAt(str1.length-1) == "*" && StringTools.startsWith(str2, str1.substr(0, str1.length-2))){
+			if(str1.charAt(str1.length-1) == "*" && StringTools.startsWith(str2, str1.substr(0, str1.length-1))){
 				return true;
 			}
 		}
