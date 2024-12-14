@@ -386,14 +386,23 @@ class PFFScene {
 	}
 
 	/**
-	* Starling node generator. Can be overloaded to customazi starling sprite creation process
+	* Starling sprite instancer
+	**/
+	public function createStarlingSprite(node_name:String):starling.display.Sprite {
+		var defl_spr = new starling.display.Sprite();
+		defl_spr.name = node_name;
+		defl_spr.touchable = false;
+		return defl_spr;
+	}
+	/**
+	* Starling node generator. Can be overloaded to customize starling sprite creation process
 	* For example it is useful to place actual button in place of some default starling Quad/Sprite node
 	**/
 	public function fillStarlingNode(starling_node:PFFNodeState, node_name:String, node_texture:Texture, trs_location_px:Utils.ArrayF, trs_scale:Utils.ArrayF, trs_rotation_eulerXYZ:Utils.ArrayF, bbox_px:Utils.ArrayF):Bool {
 		var spr_props:PFFNodeProps = prepareStarlingSpriteProps(trs_location_px, trs_scale, trs_rotation_eulerXYZ, bbox_px);
 		// trace('DBG: fillStarlingNode ${node_name} props: ${spr_props}');
 		starling_node.props = spr_props;
-		var defl_spr = new starling.display.Sprite();
+		var defl_spr = createStarlingSprite(node_name);
 		if(bbox_px != null){
 			if(spr_props.bbox_w > 0 && spr_props.bbox_h > 0){
 				// Quad
@@ -409,10 +418,8 @@ class PFFScene {
 			spr_props.pivotX = 0;
 			spr_props.pivotY = 0;
 		}
-		defl_spr.touchable = false;
 		Utils.undumpSprite(defl_spr, spr_props);
 		// trace("Sprite init", node_name, spr_props.toString());
-		defl_spr.name = node_name;
 		starling_node.sprite = defl_spr;
 		return true;
 	}
