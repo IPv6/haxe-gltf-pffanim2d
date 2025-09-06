@@ -280,12 +280,14 @@ class Utils {
 
 	static public function undumpAnimSprite(spr:DisplayObject, state:PFFNodeState):Void {
 		if(state.a_dirty > 0){
+			// trace("undumpAnimSprite alpha", spr.name);
 			spr.visible = state.props.visible;
 			// spr.alpha = props.alpha_self*props.alpha_mask;
 			spr.alpha = state.props.alpha_self;
 			state.a_dirty = 0;
 		}
 		if(state.xy_dirty > 0){
+			// trace("undumpAnimSprite xy", spr.name);
 			spr.x = state.props.x;
 			spr.y = state.props.y;
 			// spr.pivotX = state.props.pivotX;
@@ -293,11 +295,13 @@ class Utils {
 			state.xy_dirty = 0;
 		}
 		if(state.sxsy_dirty > 0){
+			// trace("undumpAnimSprite sxsy", spr.name);
 			spr.scaleX = state.props.scaleX;
 			spr.scaleY = state.props.scaleY;
 			state.sxsy_dirty = 0;
 		}
 		if(state.r_dirty > 0){
+			// trace("undumpAnimSprite r", spr.name);
 			spr.rotation = state.props.rotation;
 			state.r_dirty = 0;
 		}
