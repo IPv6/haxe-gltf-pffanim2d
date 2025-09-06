@@ -600,7 +600,7 @@ class PFFScene {
 	**/
 	public function applyAnimations(anims:Array<PFFAnimState>): Bool {
 		// try{
-		var affectedNodes:Map<Int,PFFNodeState> = new Map<Int,PFFNodeState>();// Map with jey uniqness
+		var affectedNodes:Map<Int,PFFNodeState> = new Map<Int,PFFNodeState>();// Map with key uniqness
 		for(ans in anims){
 			var infl = ans.influence;
 			if(infl < Utils.GLM_EPSILON){
